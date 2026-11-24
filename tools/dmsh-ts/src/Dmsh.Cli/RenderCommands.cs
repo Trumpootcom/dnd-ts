@@ -13,22 +13,21 @@ internal static class RenderCommands
         return RenderImage(template, Path.GetFullPath(image), pdf, FindProjectRoot()) ? 0 : 1;
     }
 
-    public static int Batch(string incoming, string output, string? templatePath, double? worldWidth)
+    public static int Batch(string? incoming, string? output, string? templatePath, double? worldWidth)
     {
         var template = ReadTemplate(templatePath, worldWidth);
-        incoming = Path.TrimEndingDirectorySeparator(Path.GetFullPath(incoming));
-        output = Path.GetFullPath(output);
-        var parent = Path.GetDirectoryName(incoming)
-            ?? throw new ArgumentException("The incoming directory must have a parent for the processed folder.");
-        var processed = Path.Combine(parent, "processed");
-        if (string.Equals(incoming, processed, StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("The incoming directory cannot also be the processed directory.");
         var projectRoot = FindProjectRoot();
+        incoming = Path.TrimEndingDirectorySeparator(Path.GetFullPath(
+            incoming ?? Path.Combine(projectRoot, "in_maps")));
+        output = Path.GetFullPath(output ?? Path.Combine(projectRoot, "out"));
+        var backup = Path.Combine(projectRoot, "bak");
+        if (string.Equals(incoming, backup, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("The incoming directory cannot also be the backup directory.");
         var groups = Directory.GetFiles(incoming).Where(IsImage)
             .GroupBy(path => Path.GetFileNameWithoutExtension(path), StringComparer.OrdinalIgnoreCase)
             .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase);
         Directory.CreateDirectory(output);
-        Directory.CreateDirectory(processed);
+        Directory.CreateDirectory(backup);
 
         var exitCode = 0;
         foreach (var group in groups)
@@ -43,7 +42,7 @@ internal static class RenderCommands
 
             var image = group.Single();
             var pdf = Path.Combine(output, Path.ChangeExtension(Path.GetFileName(image), ".pdf"));
-            var archivedImage = Path.Combine(processed, Path.GetFileName(image));
+            var archivedImage = Path.Combine(backup, Path.GetFileName(image));
             if (!RenderImage(template, image, pdf, projectRoot, archivedImage))
                 exitCode = 1;
         }
@@ -57,7 +56,7 @@ internal static class RenderCommands
         try
         {
             if (archivedImage is not null && (File.Exists(archivedImage) || Directory.Exists(archivedImage)))
-                throw new IOException($"Processed path already exists: {DisplayPath(projectRoot, archivedImage)}");
+                throw new IOException($"Backup path already exists: {DisplayPath(projectRoot, archivedImage)}");
 
             var dimensions = FilenameDimensions.Match(Path.GetFileNameWithoutExtension(image));
             if (dimensions.Success)
@@ -86,11 +85,19 @@ internal static class RenderCommands
 
     private static string FindProjectRoot()
     {
-        var current = Directory.GetCurrentDirectory();
-        for (DirectoryInfo? directory = new(current); directory is not null; directory = directory.Parent)
-            if (File.Exists(Path.Combine(directory.FullName, "src", "Dmsh.Cli", "Dmsh.Cli.csproj")))
-                return directory.FullName;
-        return current;
+        var searchPaths = new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory };
+        string? standaloneRoot = null;
+        foreach (var searchPath in searchPaths)
+        {
+            for (DirectoryInfo? directory = new(searchPath); directory is not null; directory = directory.Parent)
+            {
+                if (File.Exists(Path.Combine(directory.FullName, "tools", "dmsh-ts", "src", "Dmsh.Cli", "Dmsh.Cli.csproj")))
+                    return directory.FullName;
+                if (standaloneRoot is null && File.Exists(Path.Combine(directory.FullName, "src", "Dmsh.Cli", "Dmsh.Cli.csproj")))
+                    standaloneRoot = directory.FullName;
+            }
+        }
+        return standaloneRoot ?? Directory.GetCurrentDirectory();
     }
 
     private static string DisplayPath(string root, string path)

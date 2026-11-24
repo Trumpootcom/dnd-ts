@@ -5,12 +5,9 @@ namespace Dmsh.Core;
 /// <summary>Build identity embedded into assemblies by the shared MSBuild versioning targets.</summary>
 public sealed record ApplicationVersion(
     Version Number,
-    string CommitHash,
-    string BuildState,
     DateTimeOffset? BuildTimestampUtc)
 {
-    public string DisplayName =>
-        $"WMS Desktop v{Number} ({CommitHash}{(BuildState == "Modified" ? ", Modified" : "")})";
+    public string DisplayName => $"WMS Desktop v{Number}";
 
     public static ApplicationVersion Current { get; } = FromAssembly(typeof(ApplicationVersion).Assembly);
 
@@ -31,8 +28,6 @@ public sealed record ApplicationVersion(
 
         return new ApplicationVersion(
             number,
-            attributes.GetValueOrDefault("GitCommitHash", "unknown"),
-            attributes.GetValueOrDefault("BuildState", "Unknown"),
             timestamp);
     }
 }

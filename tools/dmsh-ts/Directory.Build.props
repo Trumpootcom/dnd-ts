@@ -1,7 +1,8 @@
 <Project>
   <PropertyGroup>
-    <!-- Major and Minor are maintained here; Build comes from Git in Directory.Build.targets. -->
+    <!-- Major, Minor, and the revision baseline are maintained per tool. -->
     <VersionPrefix>1.0</VersionPrefix>
+    <VersionPatchBase>21</VersionPatchBase>
     <VersionSuffix></VersionSuffix>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>

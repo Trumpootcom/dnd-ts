@@ -1,0 +1,4 @@
+/bak/*
+!/bak/.gitkeep
+/out/*
+!/out/.gitkeep

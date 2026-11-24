@@ -47,8 +47,8 @@ try
     var templatePath = options.GetValueOrDefault("--template");
     Console.WriteLine(ApplicationVersion.Current.DisplayName);
     Environment.ExitCode = batch
-        ? RenderCommands.Batch(options.GetValueOrDefault("--incoming", "incoming"),
-            options.GetValueOrDefault("--output", "output"), templatePath, worldWidth)
+        ? RenderCommands.Batch(options.GetValueOrDefault("--incoming"),
+            options.GetValueOrDefault("--output"), templatePath, worldWidth)
         : RenderCommands.Render(args[^1], templatePath, worldWidth);
 }
 catch (Exception error)

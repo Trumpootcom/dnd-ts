@@ -19,7 +19,7 @@ internal static class CommandHelp
                   Export images from one folder and archive successful inputs.
 
               --help, -h      Show this help.
-              --version, -v   Show the version, Git revision and UTC build time.
+              --version, -v   Show the version and UTC build time.
               --templates     List available templates with paper and grid settings.
 
             Run Dmsh.Cli help <command> or Dmsh.Cli <command> --help for examples.
@@ -40,9 +40,9 @@ internal static class CommandHelp
                 Usage: Dmsh.Cli {Batch}
 
                 Process supported images in the top level of the incoming directory.
-                Defaults to incoming and output in the current directory.
-                Save each PDF in output, then move the source to the processed
-                folder beside incoming. Reports per-image
+                Defaults to <workspace>/in_maps and <workspace>/out.
+                Save each PDF in out, then move the source to <workspace>/bak.
+                Reports per-image
                 failures and continues. Returns exit code 1 if any image failed.
 
                 Uses the built-in T000.json unless you supply --template.

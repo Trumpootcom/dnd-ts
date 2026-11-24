@@ -20,22 +20,21 @@ library as the CLI.
 
 For built-in usage help, run `Dmsh.Cli.exe --help` on Windows or
 `./Dmsh.Cli --help` on macOS. From this repository, use
-`dotnet run --project src/Dmsh.Cli -- --help`. Run a command with
+`dotnet run --project tools/dmsh-ts/src/Dmsh.Cli -- --help`. Run a command with
 `--help`, for example `Dmsh.Cli.exe batch --help`, to see its
 arguments, behavior, and an example.
 
 ## Show the build version
 
 ```powershell
-dotnet run --project src/Dmsh.Cli -- --version
+dotnet run --project tools/dmsh-ts/src/Dmsh.Cli -- --version
 ```
 
-The CLI shows the application version as `Major.Minor.Build`, the short Git
-commit hash, a `Modified` marker for staged or unstaged changes to tracked
-files, and the UTC build time. Untracked images and generated PDFs do not
-affect the marker.
-Set Major and Minor in `Directory.Build.props`. Build comes from the Git commit
-count and falls back to 0 if Git cannot resolve the revision.
+The CLI shows the application version as `Major.Minor.Revision` and the UTC
+build time. The revision is scoped to commits affecting `tools/dmsh-ts`, so
+changes to other tools do not increment it. A local change to this tool
+previews the next revision; committing that change keeps the same version.
+Set Major, Minor, and the revision baseline in `Directory.Build.props`.
 
 ## Export PDFs
 
@@ -46,7 +45,7 @@ is missing. Add JSON files to that folder to make them available by
 filename with `--template`. To save the list from the repository root:
 
 ```powershell
-dotnet run --project src/Dmsh.Cli -- --templates > templates.txt
+dotnet run --project tools/dmsh-ts/src/Dmsh.Cli -- --templates > templates.txt
 ```
 
 Each entry uses an eight-character label column for `File:`, `Paper:`,
@@ -57,7 +56,7 @@ coordinate bars per axis when the template draws them, then rounds each
 dimension down to a multiple of 5 feet. The displayed size is the available
 space before any image fitting or cropping.
 
-Both export commands print the program version and Git revision, then
+Both export commands print the program version, then
 `Using Template:` with the selected filename and its name from the JSON's
 `template` field, followed by one
 status line per image. Paths are relative to the project root, or to the
@@ -65,7 +64,7 @@ working directory when run outside the project.
 
 ```text
 Processing image: .\map.png -> .\map.pdf
-Processing image: incoming\map.png -> output\map.pdf
+Processing image: in_maps\map.png -> out\map.pdf
 Processing image: .\bad.png !Bad image file.
 ```
 
@@ -77,8 +76,8 @@ PDF export uses PDFsharp. The shared library explicitly references
 dependency brought in by PDFsharp 6.2.4.
 
 ```powershell
-dotnet run --project src/Dmsh.Cli -- map.png
-dotnet run --project src/Dmsh.Cli -- batch
+dotnet run --project tools/dmsh-ts/src/Dmsh.Cli -- map.png
+dotnet run --project tools/dmsh-ts/src/Dmsh.Cli -- batch
 ```
 
 Use `--template <name-or-path>` to replace the bundled default.
@@ -109,40 +108,52 @@ bars align with the map edges on the overview and print sheets. Explicit
 `grid.offsetX` and `grid.offsetY` are applied on top of that alignment.
 
 ```powershell
-dotnet run --project src/Dmsh.Cli -- --width 120 map.png
+dotnet run --project tools/dmsh-ts/src/Dmsh.Cli -- --width 120 map.png
 ```
 
 If the filename ends in dimensions, its width wins. This example uses
 **150 feet** from `150x110` even though `--width 120` is present:
 
 ```powershell
-dotnet run --project src/Dmsh.Cli -- --width 120 "ASHEN-E1-MAP02D_DM 150x110.png"
+dotnet run --project tools/dmsh-ts/src/Dmsh.Cli -- --width 120 "ASHEN-E1-MAP02D_DM 150x110.png"
 ```
 
 Passing one image as the final argument writes `map.pdf` beside `map.png`.
-`batch` scans the top level of `incoming/` for JPEG, PNG, BMP and WebP
-files. Put your images in `incoming/` before running it.
-The CLI creates the sibling folders `output/` and `processed/` as needed.
-It saves each PDF in `output/` before moving its source to `processed/`.
-Use `--incoming` or `--output` to change those paths. The processed folder
-always sits beside the selected incoming folder.
+`batch` scans the top level of the umbrella workspace's `in_maps/` folder
+for JPEG, PNG, BMP and WebP files. Put your map images there before running it.
+The CLI creates the shared workspace folders `out/` and `bak/` as needed.
+It saves each PDF in `out/` before moving its source to `bak/`.
+Use `--incoming` or `--output` to override the input and output paths;
+successful inputs are always archived in the workspace's `bak/` folder.
 
-Use the included `map.png` to try a single export, or run batch mode on
-the sample images already in `incoming/`. The checkout also includes
-`processed/` and `output/`, each with a `.gitkeep` placeholder.
-Batch moves the tracked samples, so Git shows their removal from
-`incoming/` after a successful run. PDFs and archived copies appear as
-untracked files until staged.
+Use the included `map.png` to try a single export, or run batch mode on the
+sample images in the umbrella workspace's `in_maps/`. Batch moves the tracked
+samples, so Git shows their removal from `in_maps/` after a successful run.
+PDFs and archived copies are generated files.
 
-On Windows, run `PROCESS_INCOMING.bat` from the repo or a published
-Windows build. It runs batch mode using the folder that contains the script.
+From the umbrella workspace, run `bin/BATCH_MAPS.bat` on Windows or
+`sh bin/BATCH_MAPS.sh` on macOS. Published Windows builds include
+`BATCH_MAPS.bat` beside the CLI executable.
+
+Use `bin/process_maps.bat` on Windows or `sh bin/process_maps.sh` on macOS.
+Both accept any CLI command and default to batch mode when called without
+arguments:
+
+```text
+bin/process_maps.bat
+bin\process_maps.bat batch
+bin\process_maps.bat map.png
+sh bin/process_maps.sh
+sh bin/process_maps.sh batch
+sh bin/process_maps.sh map.png
+```
 
 Both export modes
 replace existing PDFs by default after the new PDF has been written
 successfully. Existing archive paths and duplicate output names within a
 batch are reported as conflicts.
 
-In batch mode, each filename in `incoming/` can specify its own map width
+In batch mode, each filename in `in_maps/` can specify its own map width
 with a suffix like `150x110`.
 
 On Windows, close the existing PDF in Acrobat or another viewer before
