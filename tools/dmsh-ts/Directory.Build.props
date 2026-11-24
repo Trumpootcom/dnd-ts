@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <!-- Major and Minor are maintained here; Build comes from Git in Directory.Build.targets. -->
+    <VersionPrefix>1.0</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+</Project>

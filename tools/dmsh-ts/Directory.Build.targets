@@ -1,0 +1,50 @@
+<Project>
+  <Target Name="GenerateGitVersionMetadata" BeforeTargets="GetAssemblyVersion">
+    <Exec Command="git rev-list --count HEAD" WorkingDirectory="$(MSBuildThisFileDirectory)" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" ItemName="_GitCommitCountOutput" />
+      <Output TaskParameter="ExitCode" PropertyName="_GitCountExitCode" />
+    </Exec>
+    <Exec Command="git rev-parse --short HEAD" WorkingDirectory="$(MSBuildThisFileDirectory)" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" ItemName="_GitCommitHashOutput" />
+      <Output TaskParameter="ExitCode" PropertyName="_GitHashExitCode" />
+    </Exec>
+    <Exec Command="git --no-optional-locks status --porcelain --untracked-files=no" WorkingDirectory="$(MSBuildThisFileDirectory)" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" ItemName="_GitStatusOutput" />
+      <Output TaskParameter="ExitCode" PropertyName="_GitStatusExitCode" />
+    </Exec>
+
+    <PropertyGroup>
+      <_GitCommitCount>0</_GitCommitCount>
+      <_GitCommitHash>unknown</_GitCommitHash>
+      <_GitModified>Unknown</_GitModified>
+      <_GitCommitCount Condition="'$(_GitCountExitCode)' == '0'">@(_GitCommitCountOutput)</_GitCommitCount>
+      <_GitCommitHash Condition="'$(_GitHashExitCode)' == '0'">@(_GitCommitHashOutput)</_GitCommitHash>
+      <_GitModified Condition="'$(_GitStatusExitCode)' == '0'">Clean</_GitModified>
+      <_GitModified Condition="'$(_GitStatusExitCode)' == '0' and '@(_GitStatusOutput->Count())' != '0'">Modified</_GitModified>
+      <_BuildTimestampUtc>$([System.DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))</_BuildTimestampUtc>
+      <Version>$(VersionPrefix).$(_GitCommitCount)</Version>
+      <AssemblyVersion>$(VersionPrefix).0.0</AssemblyVersion>
+      <FileVersion>$(AssemblyVersion)</FileVersion>
+      <InformationalVersion>$(Version) ($(_GitCommitHash), $(_GitModified))</InformationalVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>ApplicationVersion</_Parameter1>
+        <_Parameter2>$(Version)</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>BuildTimestampUtc</_Parameter1>
+        <_Parameter2>$(_BuildTimestampUtc)</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>GitCommitHash</_Parameter1>
+        <_Parameter2>$(_GitCommitHash)</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>BuildState</_Parameter1>
+        <_Parameter2>$(_GitModified)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
+</Project>

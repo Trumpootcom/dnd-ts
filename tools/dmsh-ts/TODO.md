@@ -1,0 +1,23 @@
+# Porting roadmap
+
+- [x] Port the default rectangular grid, sheet badges, and optional coordinate labels on map sheets.
+- [x] Port the default TypeScript overview layout, including its legend, grid, coordinate bars, and sheet badges.
+- [x] Compare the default exports for page count, paper size and orientation, sheet order, map placement, overlap, and text positions, sizes, and weights.
+- [x] Visually compare grid spacing, stroke appearance, and labels across sheet seams and on the overview.
+- [x] Port rectangular grid dash patterns from `grid.ts`, including `dash-1` through `dash-16` where defined, `corners`, and legacy patterns and aliases.
+- [x] Visually check dashed grid rendering in the C# export.
+- [ ] Check dash alignment across sheet overlaps and on the overview in .NET exports.
+- [x] Port rotated rectangular and isometric grids using the TypeScript lattice math.
+- [ ] Check rotated and isometric offsets and dash alignment across sheet overlaps in .NET exports.
+- [x] Port hex grid geometry, rotation, offsets, and dash patterns.
+- [ ] Check shared hex edges and dash alignment across overlaps in .NET exports.
+- [ ] Implement difference blending and adaptive contrast and verify their rendered output.
+- [ ] Validate template fields and report unsupported options clearly when the renderer cannot honor them.
+- [x] Ship numbered templates `T000.json` through `T003.json` and read their display names from the `template` field.
+- [x] Add `--templates` to list template filenames, names, paper layouts, grid settings, and usable world dimensions. The output can be redirected to a text file without a prompt.
+- [x] Accept per-image width overrides from filename suffixes, fit maps to 5-foot dimensions, and clip coordinate labels at individual sheet margins.
+- [ ] Verify that batch mode continues after invalid images, filename conflicts, and archive failures, and that each failed source remains in the incoming folder.
+- [x] Check that .NET accepts an image at the 12-megapixel limit, rejects one above it before decoding pixel data, and keeps memory use bounded during a batch of large images.
+- [x] Add built-in general and per-command help so someone with only the executable can discover its usage.
+- [x] Bundle `T000.json` with the CLI and document how it is used when `--template` is omitted.
+- [ ] Verify self-contained CLI packages on Windows and macOS.

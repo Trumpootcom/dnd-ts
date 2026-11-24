@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "template": "Hex Letter",
+  "title": "TTRPG Battle Map",
+  "overview": true,
+  "coordinates": true,
+  "coordinateBarHeightRatio": 0.4,
+  "worldWidthFeet": 160,
+  "imagePlacement": "center",
+  "grid": {
+    "style": "hex",
+    "iso": false,
+    "isoAngleDegrees": null,
+    "rotationDegrees": 0,
+    "offsetX": 0,
+    "offsetY": 0,
+    "inchesPerFiveFeet": 1,
+    "lineStyle": "solid",
+    "color": "black",
+    "lineWidthPoints": 2.5,
+    "opacity": 0.6,
+    "extent": "printableCanvas"
+  },
+  "page": {
+    "size": "letter",
+    "orientation": "portrait",
+    "rows": 2,
+    "columns": 4,
+    "marginInches": 0.25,
+    "overlapInches": 0.125
+  }
+}
