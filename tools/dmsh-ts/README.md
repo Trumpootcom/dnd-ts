@@ -1,235 +1,184 @@
 # Desktop Map Slicer Headless Tool Suite
 
-See [TODO.md](TODO.md) for verified compatibility and remaining porting work.
-The default PDF layout and dashed grid rendering have been visually checked.
-The roadmap also covers numbered JSON templates and an exportable template
-inventory for scripts and other users.
+DMSH turns tabletop battle map images into printable PDF sheets. It is one of
+the tools in the `dnd-ts` umbrella repository. See [TODO.md](TODO.md) for
+compatibility notes and remaining work.
 
-A planned .NET 10 command-line tool that turns tabletop battle map images
-into printable PDFs.
+## DMSH
 
-The CLI accepts a local map image and uses its built-in `T000.json` template
-by default. This template comes from `wmsh_ts/src/default.json` and exports a PDF with an
-overview page followed by four landscape Ledger sheets in a 2×2 layout.
+- **Tool folder:** `tools/dmsh-ts/`
+- **Windows command:** `bin\process_maps.bat [command or image]`
+- **macOS command:** `sh bin/process_maps.sh [command or image]`
+- **Description:**
+  - With no arguments or with `batch`, process images from the workspace's
+    `in_maps/`, write PDFs to `out/`, and move successfully processed images
+    to `bak/`.
+  - Pass an image path, such as `map.png`, to create one PDF beside that image.
+  - Use `--width <feet>` to override the map width. A filename ending in
+    `WxH` or `WXH` sets the width from its first number and takes precedence
+    over `--width`.
+  - Use `--template <name-or-path>` to select a template; `T000.json` is the
+    default.
 
-The goal is to offer self-contained Windows and macOS downloads through
-GitHub Releases. A future Avalonia app will use the same C# rendering
-library as the CLI.
+Run commands from the umbrella workspace. Relative image paths are resolved
+from the current directory. Batch mode reads the top level of `in_maps/` and
+archives successful inputs in the shared `bak/` folder. It continues after
+individual failures and returns exit code 1 if an image fails or is skipped
+because of a conflict. Existing output PDFs are replaced after the new PDF is
+written successfully. A source image is moved to `bak/` only after its PDF is
+saved.
 
-## Get help
+### Command examples
 
-For built-in usage help, run `Dmsh.Cli.exe --help` on Windows or
-`./Dmsh.Cli --help` on macOS. From this repository, use
-`dotnet run --project tools/dmsh-ts/src/Dmsh.Cli -- --help`. Run a command with
-`--help`, for example `Dmsh.Cli.exe batch --help`, to see its
-arguments, behavior, and an example.
+The launchers default to batch mode when you provide no arguments. Pass a
+command or image path to run it directly.
 
-## Show the build version
+  ```bat
+  bin\process_maps.bat                            // batch process in_maps/
+  bin\process_maps.bat batch                      // batch process in_maps/
+  bin\process_maps.bat map.png                    // process map.png
+  bin\process_maps.bat --width 120 map.png        // override width to 120ft
+  bin\process_maps.bat E1_Farmhouse_100x60.jpg    // override width to 100ft
+  bin\process_maps.bat --template T001 map.png    // override template
 
-```powershell
-dotnet run --project tools/dmsh-ts/src/Dmsh.Cli -- --version
-```
+  bin\process_maps.bat --help                     // show help file
+  bin\process_maps.bat --version                  // show version
+  bin\process_maps.bat --templates                // show list of templates
+  ```
 
-The CLI shows the application version as `Major.Minor.Revision` and the UTC
-build time. The revision is scoped to commits affecting `tools/dmsh-ts`, so
-changes to other tools do not increment it. A local change to this tool
-previews the next revision; committing that change keeps the same version.
-Set Major, Minor, and the revision baseline in `Directory.Build.props`.
+  ```sh
+  sh bin/process_maps.sh                          # batch process in_maps/
+  sh bin/process_maps.sh batch                    # batch process in_maps/
+  sh bin/process_maps.sh map.png                  # process map.png
+  sh bin/process_maps.sh --width 120 map.png      # override width to 120ft
+  sh bin/process_maps.sh E1_Farmhouse_100x60.jpg  # override width to 100ft
+  sh bin/process_maps.sh --template T001 map.png  # override template
 
-## Export PDFs
+  sh bin/process_maps.sh --help                   # show help
+  sh bin/process_maps.sh --version                # show version
+  sh bin/process_maps.sh --templates              # show list of templates
+  ```
 
-The CLI ships templates `T000.json` through `T003.json`.
-Run `Dmsh.Cli --templates` to list the templates in the executable's
-`Templates` folder. The bundled `T000.json` appears even when that folder
-is missing. Add JSON files to that folder to make them available by
-filename with `--template`. To save the list from the repository root:
+`--help` lists commands and options. `--version` prints the version and build
+time. `--templates` lists the available templates and their paper and grid
+settings.
 
-```powershell
-dotnet run --project tools/dmsh-ts/src/Dmsh.Cli -- --templates > templates.txt
-```
+The workspace's sample maps are in `samples/maps/`. Copy a sample to `in_maps/`
+to batch-process it.
 
-Each entry uses an eight-character label column for `File:`, `Paper:`,
-`Grid:`, and `World:`. The first line shows the filename and the template
-name from the JSON. Usable
-space subtracts both margins on each sheet, overlap at each join, and two
-coordinate bars per axis when the template draws them, then rounds each
-dimension down to a multiple of 5 feet. The displayed size is the available
-space before any image fitting or cropping.
+## Templates
 
-Both export commands print the program version, then
-`Using Template:` with the selected filename and its name from the JSON's
-`template` field, followed by one
-status line per image. Paths are relative to the project root, or to the
-working directory when run outside the project.
+Templates are JSON files in `src/Dmsh.Cli/Templates/` and use schema version 1.
+The bundled `T000.json` is the default. The CLI also ships `T001.json` through
+`T003.json`. Pass a template name such as `T001` (the `.json` extension is
+optional), or pass a path to a custom JSON template. The `template` field is
+its display name.
 
-```text
-Processing image: .\map.png -> .\map.pdf
-Processing image: in_maps\map.png -> out\map.pdf
-Processing image: .\bad.png !Bad image file.
-```
+The tables below describe the JSON fields. Defaults are the values in
+`T000.json`; `coordinateBarHeightRatio` defaults to `0.4` when omitted.
 
-The arrow means the PDF was saved. If a batch archive move fails after
-saving, the same line shows the output path followed by the error.
+### General fields
 
-PDF export uses PDFsharp. The shared library explicitly references
-`System.Security.Cryptography.Pkcs` 8.0.2 to replace the vulnerable 8.0.1
-dependency brought in by PDFsharp 6.2.4.
+<table>
+<thead><tr><th>JSON field</th><th>T000 default</th><th>Description and allowed values</th></tr></thead>
+<tbody>
+<tr><td valign="top"><code>schemaVersion</code></td><td valign="top"><code>1</code></td><td valign="top">Template schema version. DMSH requires <code>1</code>.</td></tr>
+<tr><td valign="top"><code>template</code></td><td valign="top"><code>Normal Ledger - Default</code></td><td valign="top">Display name shown by <code>--templates</code> and in export status.</td></tr>
+<tr><td valign="top"><code>title</code></td><td valign="top"><code>TTRPG Battle Map</code></td><td valign="top">Title stored in the PDF document metadata.</td></tr>
+<tr><td valign="top"><code>overview</code></td><td valign="top"><code>true</code></td><td valign="top">Include (<code>true</code>) or omit (<code>false</code>) the overview page.</td></tr>
+<tr><td valign="top"><code>coordinates</code></td><td valign="top"><code>true</code></td><td valign="top">Request coordinate bars. They are drawn only for an unrotated, non-isometric rectangular grid.</td></tr>
+<tr><td valign="top"><code>coordinateBarHeightRatio</code></td><td valign="top"><code>0.4</code></td><td valign="top">Positive number controlling bar thickness as a fraction of a grid cell; <code>0.5</code> makes a half-cell bar.</td></tr>
+<tr><td valign="top"><code>worldWidthFeet</code></td><td valign="top"><code>160</code></td><td valign="top">Positive map width in feet used when fitting the image.</td></tr>
+<tr><td valign="top"><code>imagePlacement</code></td><td valign="top"><code>center</code></td><td valign="top">Image placement. DMSH currently supports <code>center</code>.</td></tr>
+</tbody>
+</table>
 
-```powershell
-dotnet run --project tools/dmsh-ts/src/Dmsh.Cli -- map.png
-dotnet run --project tools/dmsh-ts/src/Dmsh.Cli -- batch
-```
+### Grid fields
 
-Use `--template <name-or-path>` to replace the bundled default.
-The `.json` extension is optional, so `--template T002` selects
-`T002.json`. For a single
-image, put the option before the image filename. The source for the built-in
-template is [T000.json](src/Dmsh.Cli/Templates/T000.json).
+<table>
+<thead><tr><th>JSON field</th><th>T000 default</th><th>Description and allowed values</th></tr></thead>
+<tbody>
+<tr><td valign="top"><code>grid.style</code></td><td valign="top"><code>rect</code></td><td valign="top"><code>rect</code> for rectangular, or <code>hex</code> for hexagonal. <code>square</code> and <code>iso</code> are also accepted as legacy rectangular styles.</td></tr>
+<tr><td valign="top"><code>grid.iso</code></td><td valign="top"><code>false</code></td><td valign="top"><code>true</code> enables isometric projection; <code>false</code> uses regular cells.</td></tr>
+<tr><td valign="top"><code>grid.isoAngleDegrees</code></td><td valign="top"><code>null</code></td><td valign="top">With <code>grid.iso: true</code>, use a number from <code>15</code> to <code>90</code>. With <code>grid.iso: false</code>, use <code>null</code>.</td></tr>
+<tr><td valign="top"><code>grid.rotationDegrees</code></td><td valign="top"><code>0</code></td><td valign="top">Finite counterclockwise rotation in degrees.</td></tr>
+<tr><td valign="top"><code>grid.offsetX</code></td><td valign="top"><code>0</code></td><td valign="top">Grid offset in cell units; use <code>-1</code> to <code>1</code>.</td></tr>
+<tr><td valign="top"><code>grid.offsetY</code></td><td valign="top"><code>0</code></td><td valign="top">Grid offset in cell units; use <code>-1</code> to <code>1</code>.</td></tr>
+<tr><td valign="top"><code>grid.inchesPerFiveFeet</code></td><td valign="top"><code>1</code></td><td valign="top">Printed inches for each 5-foot cell. Values must produce at least <code>0.25</code> PDF points of grid spacing and fit the selected page.</td></tr>
+<tr><td valign="top"><code>grid.lineStyle</code></td><td valign="top"><code>solid</code></td><td valign="top">
+<table><thead><tr><th>Style</th><th>Pattern</th></tr></thead><tbody>
+<tr><td valign="top"><code>solid</code></td><td valign="top"><code>▕────────────────────────────────▏</code></td></tr>
+<tr><td valign="top"><code>dash-1</code></td><td valign="top"><code>▕────────&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;────────▏</code></td></tr>
+<tr><td valign="top"><code>dash-2</code></td><td valign="top"><code>▕────&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;────────&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;────▏</code></td></tr>
+<tr><td valign="top"><code>dash-3</code></td><td valign="top"><code>▕───&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;─────&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;─────&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;──▏</code></td></tr>
+<tr><td valign="top"><code>dash-4</code></td><td valign="top"><code>▕──&nbsp;&nbsp;&nbsp;&nbsp;────&nbsp;&nbsp;&nbsp;&nbsp;────&nbsp;&nbsp;&nbsp;&nbsp;────&nbsp;&nbsp;&nbsp;&nbsp;──▏</code></td></tr>
+<tr><td valign="top"><code>dash-5</code></td><td valign="top"><code>▕──&nbsp;&nbsp;&nbsp;───&nbsp;&nbsp;&nbsp;───&nbsp;&nbsp;&nbsp;&nbsp;───&nbsp;&nbsp;&nbsp;&nbsp;───&nbsp;&nbsp;&nbsp;─▏</code></td></tr>
+<tr><td valign="top"><code>dash-6</code></td><td valign="top"><code>▕──&nbsp;&nbsp;───&nbsp;&nbsp;&nbsp;──&nbsp;&nbsp;&nbsp;───&nbsp;&nbsp;&nbsp;──&nbsp;&nbsp;&nbsp;───&nbsp;&nbsp;─▏</code></td></tr>
+<tr><td valign="top"><code>dash-8</code></td><td valign="top"><code>▕─&nbsp;&nbsp;──&nbsp;&nbsp;──&nbsp;&nbsp;──&nbsp;&nbsp;──&nbsp;&nbsp;──&nbsp;&nbsp;──&nbsp;&nbsp;──&nbsp;&nbsp;─▏</code></td></tr>
+<tr><td valign="top"><code>dash-10</code></td><td valign="top"><code>▕─&nbsp;&nbsp;─&nbsp;&nbsp;─&nbsp;&nbsp;─&nbsp;&nbsp;──&nbsp;&nbsp;─&nbsp;&nbsp;──&nbsp;&nbsp;─&nbsp;&nbsp;─&nbsp;&nbsp;─&nbsp;&nbsp;▏</code></td></tr>
+<tr><td valign="top"><code>dash-16</code></td><td valign="top"><code>▕─&nbsp;─&nbsp;─&nbsp;─&nbsp;─&nbsp;─&nbsp;─&nbsp;─&nbsp;─&nbsp;─&nbsp;─&nbsp;─&nbsp;─&nbsp;─&nbsp;─&nbsp;─&nbsp;▏</code></td></tr>
+<tr><td valign="top"><code>corners</code></td><td valign="top"><code>▕────&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;────▏</code></td></tr>
+<tr><td valign="top"><code>none</code></td><td valign="top"><code>▕&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▏</code></td></tr>
+</tbody></table></td></tr>
+<tr><td valign="top"><code>grid.color</code></td><td valign="top"><code>black</code></td><td valign="top">DMSH renders <code>black</code>, <code>gray</code>, and <code>white</code>. <code>diff</code> and <code>contrast</code> are not implemented in DMSH yet.</td></tr>
+<tr><td valign="top"><code>grid.lineWidthPoints</code></td><td valign="top"><code>2.5</code></td><td valign="top">Grid stroke width in PDF points.</td></tr>
+<tr><td valign="top"><code>grid.opacity</code></td><td valign="top"><code>0.6</code></td><td valign="top">Grid opacity from <code>0</code> (hidden) to <code>1</code> (opaque).</td></tr>
+<tr><td valign="top"><code>grid.extent</code></td><td valign="top"><code>printableCanvas</code></td><td valign="top">DMSH supports <code>printableCanvas</code>.</td></tr>
+</tbody>
+</table>
 
-Pass `--width <feet>` to override the template's `worldWidthFeet` for
-one run. If an image filename ends in `WxH` or `WXH` before the extension,
-the first number takes precedence over both `--width` and the template.
-For example, `ASHEN-E1-MAP02D_DM 150x110.png` uses a world width of 150 feet.
-The second number marks the filename pattern. The renderer uses the image's
-aspect ratio for placement. In a batch, the override applies to each image
-independently. The template file stays intact.
 
-After fitting the map to the requested width and paper, the exporter
-rounds both map dimensions down to multiples of 5 feet. It tries scaling
-by width and cropping height, then scaling by height and cropping width.
-It keeps the result that retains the most of the original image, using
-the width-first result on a tie. The crop is centered, and the image
-keeps its aspect ratio. If a whole 5-foot cell cannot fit on both axes,
-the export reports an error.
+### Page fields
 
-Unrotated rectangular grids shift by half a cell on each axis with an odd
-number of 5-foot cells. With zero template offsets, grid lines and coordinate
-bars align with the map edges on the overview and print sheets. Explicit
-`grid.offsetX` and `grid.offsetY` are applied on top of that alignment.
+<table>
+<thead><tr><th>JSON field</th><th>T000 default</th><th>Description and allowed values</th></tr></thead>
+<tbody>
+<tr><td valign="top"><code>page.size</code></td><td valign="top"><code>ledger</code></td><td valign="top"><code>letter</code> or <code>ledger</code>.</td></tr>
+<tr><td valign="top"><code>page.orientation</code></td><td valign="top"><code>landscape</code></td><td valign="top"><code>portrait</code> or <code>landscape</code>.</td></tr>
+<tr><td valign="top"><code>page.rows</code></td><td valign="top"><code>2</code></td><td valign="top">Positive integer number of sheet rows.</td></tr>
+<tr><td valign="top"><code>page.columns</code></td><td valign="top"><code>2</code></td><td valign="top">Positive integer number of sheet columns. Rows &#215; columns must not exceed 100 sheets.</td></tr>
+<tr><td valign="top"><code>page.marginInches</code></td><td valign="top"><code>0.25</code></td><td valign="top">Nonnegative margin per edge in inches; it must leave a printable area.</td></tr>
+<tr><td valign="top"><code>page.overlapInches</code></td><td valign="top"><code>0.125</code></td><td valign="top">Nonnegative overlap between sheets in inches; it must be less than the printable page dimensions.</td></tr>
+</tbody>
+</table>
 
-```powershell
-dotnet run --project tools/dmsh-ts/src/Dmsh.Cli -- --width 120 map.png
-```
+Each filename passed to `--template` can omit the `.json` extension. For
+example, `--template T002` selects `T002.json`. A path such as
+`--template path/to/custom.json` selects a custom template. The command
+`--templates` prints the installed filenames, names, paper and grid settings,
+and usable world dimensions.
 
-If the filename ends in dimensions, its width wins. This example uses
-**150 feet** from `150x110` even though `--width 120` is present:
+## Map fitting and cropping
 
-```powershell
-dotnet run --project tools/dmsh-ts/src/Dmsh.Cli -- --width 120 "ASHEN-E1-MAP02D_DM 150x110.png"
-```
+The requested `worldWidthFeet` (or `--width`) sets the map's target scale for
+the selected paper and grid spacing. DMSH accounts for page margins, sheet
+overlap, and coordinate bars when calculating the printable canvas, then
+scales the image without changing its aspect ratio.
 
-Passing one image as the final argument writes `map.pdf` beside `map.png`.
-`batch` scans the top level of the umbrella workspace's `in_maps/` folder
-for JPEG, PNG, BMP and WebP files. Put your map images there before running it.
-The CLI creates the shared workspace folders `out/` and `bak/` as needed.
-It saves each PDF in `out/` before moving its source to `bak/`.
-Use `--incoming` or `--output` to override the input and output paths;
-successful inputs are always archived in the workspace's `bak/` folder.
+The final map dimensions are rounded down to whole 5-foot cells on both axes.
+DMSH tries a width-aligned fit and a height-aligned fit, then chooses the one
+that retains more of the image. It center-crops the excess along the other
+edge, which is usually the shorter edge. If a 5-foot cell cannot fit on both
+axes, export fails. The source image and template are not changed.
 
-Use the included `map.png` to try a single export, or run batch mode on the
-sample images in the umbrella workspace's `in_maps/`. Batch moves the tracked
-samples, so Git shows their removal from `in_maps/` after a successful run.
-PDFs and archived copies are generated files.
+A filename suffix such as `100x60` or `100X60` sets the width to 100 feet for
+that image. This filename value takes precedence over `--width` and the
+template's `worldWidthFeet`. For example, `E1 Farmhouse 100x60.jpg` uses a
+100-foot world width.
 
-Use `bin/process_maps.bat` on Windows or `sh bin/process_maps.sh` on macOS.
-Both accept any CLI command and default to batch mode when called without
-arguments:
+## Image preprocessing
 
-```text
-bin/process_maps.bat
-bin\process_maps.bat batch
-bin\process_maps.bat map.png
-sh bin/process_maps.sh
-sh bin/process_maps.sh batch
-sh bin/process_maps.sh map.png
-```
+DMSH accepts JPEG, PNG, BMP, and static WebP images. It rejects images over
+12,000,000 pixels and animated or multi-frame images before decoding their
+pixels.
 
-Both export modes
-replace existing PDFs by default after the new PDF has been written
-successfully. Existing archive paths and duplicate output names within a
-batch are reported as conflicts.
+For PDF output, DMSH preserves the source aspect ratio, averages source pixels
+when resizing, composites transparency onto white, and limits the working
+image's longest edge to 2,400 pixels without upscaling. It encodes that working
+image as a quality-50 JPEG for embedding in the PDF. The original image file
+remains unchanged.
 
-In batch mode, each filename in `in_maps/` can specify its own map width
-with a suffix like `150x110`.
-
-On Windows, close the existing PDF in Acrobat or another viewer before
-rerunning the command if the viewer blocks replacement. If replacement
-fails, the existing PDF stays in place.
-Batch processing continues after an individual failure and returns exit code 1
-if any image failed or was skipped due to a conflict.
-
-The exporter draws the clipped map, a rectangular, isometric, or hex grid,
-and sheet badges such as A1 and B1. On unrotated rectangular sheets, set
-`"coordinates": false` in the template JSON to omit the coordinate bars
-and their reserved space. The default template enables them. The optional
-overview shows the rectangular grid, sheet outlines and their badges, with one set of coordinate
-bars around the full map when coordinates are enabled.
-
-Set `grid.rotationDegrees` to rotate either grid style. For an isometric
-grid, keep `grid.style` as `"rect"` and set `grid.iso` to `true` and
-`grid.isoAngleDegrees` to a value from 15 to 90. Use `null` for the angle
-when `grid.iso` is false. The settings apply on the map sheets and overview.
-
-Set `grid.style` to `"hex"` for hex grids. Hex grids support rotation,
-offsets, and isometric tilt. Grids that exceed the TypeScript limit of
-50,000 candidate cells are rejected. Coordinate bars are unavailable for hex grids.
-
-For all three grid types, `grid.lineStyle` supports `solid`, `none`,
-`dash-1`, `dash-2`, `dash-3`, `dash-4`, `dash-5`, `dash-6`, `dash-8`,
-`dash-10`, `dash-16`, and `corners`, plus the TypeScript legacy patterns
-and aliases. The cell-based patterns start at grid intersections so their
-phase continues across overlapping sheets. The overview uses the same patterns.
-Hex dash lengths are based on each edge's length.
-
-The overview is always landscape and uses the source image filename
-without its extension as the displayed map title. It uses the TypeScript
-layout formulas for the map area and the left title, legend, and scaling panel. Panel font
-sizes scale with the printable page height. Panel text, sheet badges, and
-coordinate labels use selectable PDF Helvetica and Helvetica Bold with the
-same measurement tables as the TypeScript exporter. PDF viewers may
-substitute their own Helvetica glyphs.
-
-On the overview and map sheets, the exporter draws the grid first, then
-any coordinate bars, then the page badges so they stay on top.
-On individual sheets, coordinate labels for partial grid cells retain their
-original placement. Their boxes and text are clipped at the printable margins.
-Every sixth coordinate label (30, 60, 90 feet, and so on) has a darker
-fill. All coordinate label boxes use the same border width.
-Rectangular and isometric grids double the template's `grid.lineWidthPoints`
-on every sixth interior grid line in both directions, counting from the
-map edges. The edges and hex grid lines retain the normal stroke width.
-
-Coordinate bar labels use the TypeScript sizing and placement formulas. The
-bar thickness is set by the top-level `coordinateBarHeightRatio` template
-setting. It defaults to `0.4`, or 40% of a grid cell, when omitted. Use
-`0.5` for a half-cell bar. The map fit reserves room for two
-bars on each axis using that same ratio. Row and column labels use 95% of that
-thickness and 60% horizontal scaling. Distance numbers use 85% of the
-thickness and 50% horizontal scaling regardless of digit count. Both use
-Helvetica Bold, with lighter ink for distance numbers. Horizontal text uses
-the original TypeScript baseline calculation.
-
-Sheet badges use 18-point bold text with the TypeScript badge's baseline,
-padding, and corner placement.
-
-Regenerate PDFs made by older builds if Acrobat reports a page error. The
-exporter leaves PDF page commands uncompressed and embeds the map as a JPEG
-to avoid the incomplete compressed streams seen in those
-exports.
-
-### Image preprocessing
-
-Both commands check image dimensions before decoding pixels and reject images
-over 12,000,000 pixels or with multiple frames. The exporter preserves the
-aspect ratio, rounds the scaled dimensions to whole pixels, and caps the
-longest edge at 2,400 pixels without upscaling. It averages source pixels
-after compositing transparency onto white and embeds a quality 50 JPEG.
-The sheet layout uses the resulting JPEG dimensions, as in the TypeScript
-exporter. Source image contents stay intact.
-
-The JPEG quality setting is independent of the final PDF file size. SkiaSharp
-handles decoding and encoding, so JPEG bytes can differ from TypeScript and
-the CLI has no fixed decoder memory cap. The 12-megapixel input limit
-bounds the decoded pixel buffer size, while total memory use also includes
-the working image, decoder buffers, and PDF generation.
-The image limit and large-image batch behavior have been checked locally.
+SkiaSharp handles image decoding and encoding, so the generated JPEG bytes can
+differ from the TypeScript exporter. Memory use includes the source pixels,
+decoder buffers, working image, and PDF generation; the 12-megapixel input cap
+bounds the source pixel buffer.
