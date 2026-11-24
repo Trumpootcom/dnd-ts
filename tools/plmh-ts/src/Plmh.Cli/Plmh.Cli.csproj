@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Plmh.Core\Plmh.Core.csproj" />
+    <EmbeddedResource Include="Templates/T000.json" LogicalName="T000.json" />
+    <None Update="Templates/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="../../../../bin/process_portraits.bat" Link="process_portraits.bat" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

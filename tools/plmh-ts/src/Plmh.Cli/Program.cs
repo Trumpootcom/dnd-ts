@@ -1,0 +1,79 @@
+using Plmh.Core;
+
+var applicationVersion = ApplicationVersion.Current;
+var displayName = applicationVersion.DisplayName;
+
+if (args is ["--version"] or ["-v"])
+{
+    Console.WriteLine(displayName);
+    Console.WriteLine($"Built: {applicationVersion.BuildTimestampUtc?.ToString("u") ?? "unknown"}");
+    return;
+}
+
+if (args is ["--help"] or ["-h"] or ["help"])
+{
+    Console.WriteLine($"""
+        {displayName}
+        Portrait Layout Manager Headless Tool Suite
+
+        Usage: Plmh.Cli [batch] [--template <name-or-path>]
+               Plmh.Cli [--template <name-or-path>] <portrait-path>
+
+          batch                 Process images in <workspace>/in_portraits.
+          <portrait-path>       Create a PDF beside one portrait image.
+          --template <value>    Select a template; T000 is the default.
+          --help, -h            Show this help.
+          --version, -v         Show the version and UTC build time.
+
+        Batch groups portraits by encounter and writes one PDF per encounter to <workspace>/out.
+        Source portraits are retained.
+        """);
+    return;
+}
+
+Console.WriteLine(displayName);
+try
+{
+    if (args.Length == 0)
+    {
+        Environment.ExitCode = PortraitCommands.Batch(null);
+        return;
+    }
+
+    var batch = args[0] == "batch";
+    string? template = null;
+    var positional = new List<string>();
+    for (var i = 0; i < args.Length; i++)
+    {
+        if (args[i] == "--template")
+        {
+            if (template is not null || i + 1 >= args.Length || string.IsNullOrWhiteSpace(args[i + 1]))
+                throw new ArgumentException("Specify --template once with a value.");
+            template = args[++i];
+            continue;
+        }
+        if (batch && i == 0)
+            continue;
+        if (args[i].StartsWith("-", StringComparison.Ordinal))
+            throw new ArgumentException($"Unknown option '{args[i]}'. Run with --help for usage.");
+        positional.Add(args[i]);
+    }
+
+    if (batch)
+    {
+        if (positional.Count != 0)
+            throw new ArgumentException("Batch mode does not take a portrait path.");
+        Environment.ExitCode = PortraitCommands.Batch(template);
+    }
+    else
+    {
+        if (positional.Count != 1)
+            throw new ArgumentException("Pass one portrait image path. Run with --help for usage.");
+        Environment.ExitCode = PortraitCommands.Single(positional[0], template);
+    }
+}
+catch (Exception error)
+{
+    Console.Error.WriteLine(error.Message);
+    Environment.ExitCode = 1;
+}

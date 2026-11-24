@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "template": "Nameplate - Default",
+  "title": "Portrait Nameplates",
+  "background": {
+    "image": "bg_parchment.png",
+    "width": 1000,
+    "height": 1400
+  },
+  "frame": {
+    "image": "frame_default.png",
+    "width": 1060,
+    "height": 1484
+  },
+  "regions": {
+    "token_id": { "L": 769, "T": 72, "W": 164, "H": 180 },
+    "portrait": { "L": 117, "T": 99, "W": 767, "H": 1036 },
+    "name": { "L": 118, "T": 1178, "W": 767, "H": 94 },
+    "size_type": { "L": 118, "T": 1280, "W": 767, "H": 48 }
+  },
+  "page": {
+    "size": "letter",
+    "orientation": "landscape",
+    "marginInches": 0.25,
+    "columnGapInches": 0.25,
+    "rowGapInches": 0.25,
+    "columns": 3,
+    "rows": 1,
+    "placement": "topLeft"
+  }
+}

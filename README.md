@@ -11,15 +11,17 @@ dnd-ts/
 ├── bak/             Shared archive for successfully processed inputs
 ├── bin/             Shared command launchers
 ├── in_maps/         Map images waiting for batch processing
+├── in_portraits/    Portrait images waiting for batch processing
 ├── out/             Shared output folder for generated files
 ├── samples/         Sample files for each tool
 │   └── maps/        DMSH sample maps; copy to in_maps/ to process
 └── tools/
     └── dmsh-ts/     Desktop Map Slicer Headless Tool Suite
+    └── plmh-ts/     Portrait Layout Manager Headless Tool Suite
 ```
 
-Add future tools as sibling folders under `tools/`. Add type-specific input
-folders, such as `in_portraits/`, when a tool needs them. All tools can use the
+Add future tools as sibling folders under `tools/`. PLMH uses the shared
+`in_portraits/` input folder. All tools can use the
 shared `bak/` and `out/` folders; tools should choose clear filenames to avoid
 output collisions.
 
@@ -71,3 +73,13 @@ output collisions.
   sh bin/process_maps.sh --version                # show version
   sh bin/process_maps.sh --templates              # show list of templates
   ```
+
+- **PLMH** (See [PLMH README](tools/plmh-ts/README.md) for full details.)
+  - **Tool folder:** `tools/plmh-ts/`
+  - **Name:** Portrait Layout Manager Headless Tool Suite
+  - **Windows command:** `bin\process_portraits.bat [batch or portrait path]`
+  - **Description:** Creates printable PDFs from portraits using filename metadata and a JSON template.
+    - With no arguments or with `batch`, groups `in_portraits/` images by encounter and writes one PDF per encounter to `out/`.
+    - Pass a portrait file path to write a single PDF beside that image.
+    - Source portrait files are retained in `in_portraits/`.
+    - `T000.json` is the default template in `tools/plmh-ts/src/Plmh.Cli/Templates/`.
