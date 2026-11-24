@@ -70,7 +70,7 @@ public static class PortraitPdfExporter
                     var cardX = cellX;
                     var cardY = cellY;
 
-                    using var portraitData = ReadImage(portrait.Path);
+                    using var portraitData = ReadImage(portrait.Path, cropTransparentPadding: true);
                     using var image = XImage.FromStream(portraitData);
                     graphics.DrawImage(background, cardX, cardY, cardWidth, cardHeight);
                     DrawFittedImage(graphics, image, cardX, cardY, template.Regions.Portrait, scale);
@@ -109,7 +109,8 @@ public static class PortraitPdfExporter
             y + (height - drawHeight) / 2, drawWidth, drawHeight);
     }
 
-    private static MemoryStream ReadImage(string path, int? expectedWidth = null, int? expectedHeight = null)
+    private static MemoryStream ReadImage(string path, int? expectedWidth = null, int? expectedHeight = null,
+        bool cropTransparentPadding = false)
     {
         if (!File.Exists(path))
             throw new FileNotFoundException("Image file not found.", path);
@@ -128,9 +129,72 @@ public static class PortraitPdfExporter
             throw new InvalidDataException($"Image dimensions are {codec.Info.Width}x{codec.Info.Height}; template specifies {width}x{expectedHeight}.");
         using var bitmap = SKBitmap.Decode(codec)
             ?? throw new InvalidDataException($"Image pixels could not be decoded: {path}");
-        using var encoded = bitmap.Encode(SKEncodedImageFormat.Png, 100)
+        using var cropped = cropTransparentPadding ? CropTransparentPadding(bitmap) : null;
+        var imageToEncode = cropped ?? bitmap;
+        using var encoded = imageToEncode.Encode(SKEncodedImageFormat.Png, 100)
             ?? throw new InvalidDataException("Image could not be converted for PDF output.");
         return new MemoryStream(encoded.ToArray(), writable: false);
+    }
+
+    private static SKBitmap? CropTransparentPadding(SKBitmap source)
+    {
+        // Probe inward from the image center. Generated portraits sometimes have
+        // an opaque one-pixel frame around an otherwise transparent canvas, so
+        // the outermost nontransparent pixel is not a useful crop boundary.
+        var left = FindTransparentColumn(source, source.Width / 2, -1);
+        var right = FindTransparentColumn(source, source.Width / 2, 1);
+        var top = FindTransparentRow(source, source.Height / 2, -1);
+        var bottom = FindTransparentRow(source, source.Height / 2, 1);
+
+        // If no transparent boundary was found on an axis, preserve that axis.
+        if (left < 0) left = 0;
+        if (right < 0) right = source.Width - 1;
+        if (top < 0) top = 0;
+        if (bottom < 0) bottom = source.Height - 1;
+
+        if (left == 0 && top == 0 && right == source.Width - 1 && bottom == source.Height - 1)
+            return null;
+
+        var width = right - left + 1;
+        var height = bottom - top + 1;
+        var result = new SKBitmap(width, height);
+        using var canvas = new SKCanvas(result);
+        canvas.Clear(SKColors.Transparent);
+        canvas.DrawBitmap(source, new SKRect(-left, -top, source.Width - left, source.Height - top));
+        canvas.Flush();
+        return result;
+    }
+
+    private static int FindTransparentColumn(SKBitmap source, int start, int direction)
+    {
+        for (var x = start; x >= 0 && x < source.Width; x += direction)
+        {
+            var transparent = true;
+            for (var y = 0; y < source.Height; y++)
+            {
+                if (source.GetPixel(x, y).Alpha == 0) continue;
+                transparent = false;
+                break;
+            }
+            if (transparent) return direction < 0 ? x + 1 : x - 1;
+        }
+        return -1;
+    }
+
+    private static int FindTransparentRow(SKBitmap source, int start, int direction)
+    {
+        for (var y = start; y >= 0 && y < source.Height; y += direction)
+        {
+            var transparent = true;
+            for (var x = 0; x < source.Width; x++)
+            {
+                if (source.GetPixel(x, y).Alpha == 0) continue;
+                transparent = false;
+                break;
+            }
+            if (transparent) return direction < 0 ? y + 1 : y - 1;
+        }
+        return -1;
     }
 
     private static (double Width, double Height) GetPageSize(PageTemplate page)
