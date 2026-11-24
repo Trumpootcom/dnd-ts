@@ -9,7 +9,6 @@
     <ProjectReference Include="..\Dmsh.Core\Dmsh.Core.csproj" />
     <EmbeddedResource Include="Templates/T000.json" LogicalName="T000.json" />
     <None Update="Templates/*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="../../../../bin/BATCH_MAPS.bat" Link="BATCH_MAPS.bat" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../../../../bin/process_maps.bat" Link="process_maps.bat" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../../../../bin/process_maps.sh" Link="process_maps.sh" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>

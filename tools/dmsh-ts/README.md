@@ -131,10 +131,6 @@ sample images in the umbrella workspace's `in_maps/`. Batch moves the tracked
 samples, so Git shows their removal from `in_maps/` after a successful run.
 PDFs and archived copies are generated files.
 
-From the umbrella workspace, run `bin/BATCH_MAPS.bat` on Windows or
-`sh bin/BATCH_MAPS.sh` on macOS. Published Windows builds include
-`BATCH_MAPS.bat` beside the CLI executable.
-
 Use `bin/process_maps.bat` on Windows or `sh bin/process_maps.sh` on macOS.
 Both accept any CLI command and default to batch mode when called without
 arguments:
