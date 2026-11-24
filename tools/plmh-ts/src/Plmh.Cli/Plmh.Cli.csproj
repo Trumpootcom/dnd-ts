@@ -7,7 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Plmh.Core\Plmh.Core.csproj" />
-    <EmbeddedResource Include="Templates/T000.json" LogicalName="T000.json" />
+    <EmbeddedResource Include="Templates/T000.jsonc" LogicalName="T000.jsonc" />
     <None Update="Templates/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../../../../bin/process_portraits.bat" Link="process_portraits.bat" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>

@@ -12,5 +12,11 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="HelveticaMetrics.json" />
+    <EmbeddedResource Include="Fonts/Cinzel-ExtraBold.ttf" />
+    <EmbeddedResource Include="Fonts/LibreBaskerville-Regular.ttf" />
+    <EmbeddedResource Include="Fonts/LibreBaskerville-Bold.ttf" />
+    <None Update="Fonts/OFL-Cinzel.txt" Pack="true" PackagePath="licenses/" />
+    <None Update="Fonts/OFL-LibreBaskerville.txt" Pack="true" PackagePath="licenses/"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

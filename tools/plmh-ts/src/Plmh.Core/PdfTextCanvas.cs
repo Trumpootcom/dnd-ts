@@ -7,9 +7,10 @@ using PdfSharp.Pdf;
 
 namespace Plmh.Core;
 
-internal sealed class PdfTextCanvas(PdfPage page)
+internal sealed class PdfTextCanvas(PdfPage page, string fontFamily)
 {
     private const string Marker = "PLMH_TEXT_";
+    private const double smallCapsRatio = 0.85;
     private static readonly FontMetrics Metrics = LoadMetrics();
     private readonly List<string> commands = [];
 
@@ -53,8 +54,19 @@ internal sealed class PdfTextCanvas(PdfPage page)
     {
         if (text.Length == 0 || size <= 0)
             return;
+        if (EmbeddedFontResolver.IsEmbedded(fontFamily))
+        {
+            var embeddedFont = CreateEmbeddedFont(size, bold);
+            var state = graphics.Save();
+            graphics.TranslateTransform(x, baseline);
+            graphics.ScaleTransform(widthScale, 1);
+            graphics.DrawString(text, embeddedFont, new XSolidBrush(color),
+                new XPoint(0, 0), XStringFormats.BaseLineLeft);
+            graphics.Restore(state);
+            return;
+        }
         var matrix = rotated ? "0 1 -1 0" : "1 0 0 1";
-        var font = bold ? "/PlmhHelveticaBold" : "/PlmhHelvetica";
+        var font = bold ? "/PlmhBold" : "/PlmhRegular";
         var hex = Convert.ToHexString(Encode(text));
         graphics.WriteComment(Marker + commands.Count.ToString(CultureInfo.InvariantCulture));
         commands.Add(FormattableString.Invariant(
@@ -62,7 +74,7 @@ internal sealed class PdfTextCanvas(PdfPage page)
     }
 
     public void DrawSmallCaps(XGraphics graphics, string text, double size, bool bold, XColor color,
-        double x, double baseline, double maxWidth, double smallScale = 0.72)
+        double x, double baseline, double maxWidth)
     {
         if (text.Length == 0 || size <= 0 || maxWidth <= 0) return;
 
@@ -80,19 +92,19 @@ internal sealed class PdfTextCanvas(PdfPage page)
             }
 
             var isLetter = char.IsLetter(character);
-            var glyphSize = isLetter && !firstLetterInWord ? size * smallScale : size;
+            var glyphSize = isLetter && !firstLetterInWord ? size * smallCapsRatio : size;
             Append(char.ToUpperInvariant(character), glyphSize);
             if (isLetter) firstLetterInWord = false;
         }
         Flush();
 
-        var measuredWidth = runs.Sum(run => Measure(run.Text, run.Size, bold));
+        var measuredWidth = runs.Sum(run => MeasureForFont(graphics, run.Text, run.Size, bold));
         var widthScale = Math.Min(1, maxWidth / measuredWidth);
         var drawX = x + (maxWidth - measuredWidth * widthScale) / 2;
         foreach (var run in runs)
         {
             Draw(graphics, run.Text, run.Size, bold, color, drawX, baseline, widthScale: widthScale);
-            drawX += Measure(run.Text, run.Size, bold) * widthScale;
+            drawX += MeasureForFont(graphics, run.Text, run.Size, bold) * widthScale;
         }
 
         void Append(char character, double glyphSize)
@@ -110,14 +122,37 @@ internal sealed class PdfTextCanvas(PdfPage page)
         }
     }
 
+    public double MeasureForFont(XGraphics graphics, string text, double size, bool bold)
+    {
+        if (!EmbeddedFontResolver.IsEmbedded(fontFamily))
+            return Measure(text, size, bold);
+        return graphics.MeasureString(text, CreateEmbeddedFont(size, bold)).Width;
+    }
+
+    private XFont CreateEmbeddedFont(double size, bool bold)
+    {
+        var isLibreBaskerville = EmbeddedFontResolver.IsLibreBaskerville(fontFamily);
+        var family = isLibreBaskerville ? EmbeddedFontResolver.LibreBaskerville : fontFamily;
+        var useBold = fontFamily == EmbeddedFontResolver.GeorgiaBold
+            || (isLibreBaskerville && (bold || fontFamily == EmbeddedFontResolver.LibreBaskervilleBold));
+        return new XFont(family, size, useBold ? XFontStyleEx.Bold : XFontStyleEx.Regular,
+            new XPdfFontOptions(PdfFontEmbedding.TryComputeSubset));
+    }
+
     public void Finish()
     {
         if (commands.Count == 0)
             return;
         var resources = GetOrAddDictionary(page, "/Resources");
         var fonts = GetOrAddDictionary(resources, "/Font");
-        AddFont(fonts, "/PlmhHelvetica", "/Helvetica");
-        AddFont(fonts, "/PlmhHelveticaBold", "/Helvetica-Bold");
+        var fontNames = fontFamily switch
+        {
+            "Times" => (Regular: "/Times-Roman", Bold: "/Times-Bold"),
+            "Courier" => (Regular: "/Courier", Bold: "/Courier-Bold"),
+            _ => (Regular: "/Helvetica", Bold: "/Helvetica-Bold")
+        };
+        AddFont(fonts, "/PlmhRegular", fontNames.Regular);
+        AddFont(fonts, "/PlmhBold", fontNames.Bold);
 
         foreach (var content in page.Contents)
         {

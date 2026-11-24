@@ -26,16 +26,32 @@ bin\process_portraits.bat --template T000 "in_portraits\e1_a2_Hadran Pell_medium
 - `src/Plmh.Cli/` — command-line application and bundled templates.
 - `src/Plmh.Core/` — reusable layout and rendering library for the CLI and
   potential future app.
-- `src/Plmh.Cli/Templates/T000.json` — embedded default template.
+- `src/Plmh.Cli/Templates/T000.jsonc` — embedded default template.
 
 ## Template
 
-Templates use schema version 1. `T000.json` defines shared canvas dimensions
-under `size`, background and frame image paths, portrait and text placement
+Templates use schema version 1 and accept both JSON and JSON with comments.
+`T000.jsonc` defines shared canvas dimensions
+under `size`, a font family, background and frame image paths, portrait and text placement
 rectangles, and paper size, orientation, margins, and placement. Both images
 are resized to `size.width` and `size.height` when loaded. Region coordinates
 and dimensions use those canvas pixels, measured from the top-left. Image
-paths are resolved relative to the template JSON file.
+paths are resolved relative to the template file. To change the default font,
+uncomment one `"font"` line in `T000.jsonc` and comment out the current one.
+The default is `Libre Baskerville Bold`, which uses bold for all labels.
+`Libre Baskerville` uses bold for the token ID and name and regular for the
+size/type. Both options use gold (`#CEAF4E`) and embed the
+[Libre Baskerville](https://github.com/impallari/Libre-Baskerville) faces in
+exported PDFs. The SIL Open Font License is in
+`src/Plmh.Core/Fonts/OFL-LibreBaskerville.txt`.
+
+`Georgia Bold` uses the installed TrueType face on Windows or macOS. PLMH
+embeds a subset in the exported PDF when the installed face permits it.
+
+The bundled Cinzel
+ExtraBold font is an 800-weight instance of [Cinzel from Google Fonts](https://github.com/google/fonts/tree/main/ofl/cinzel),
+embedded in exported PDFs under the SIL Open Font License. Its license is in
+`src/Plmh.Core/Fonts/OFL-Cinzel.txt`.
 
 The exporter creates Letter, Legal, or Ledger PDFs with portrait cards placed
 in the configured row and column grid. The grid starts at the top-left page
@@ -52,10 +68,43 @@ ratio. Batch mode groups portraits by the first filename field and writes one
 PDF per encounter, such as `out/encounter_e1.pdf`; additional cards continue on
 new pages in that encounter PDF.
 
-Before placement, PLMH crops fully transparent outer padding from portrait
-images using the bounding box of pixels with nonzero alpha. Visible and
-partially transparent edge pixels are preserved. Background and frame images
-are not cropped.
+The first page of each PDF shows the encounter lineup in portrait order. The
+cutouts share a baseline and a common scale based on the heights in their
+filenames. For a portrait without a height suffix, `defaultHeightFeet` supplies
+the lineup height by creature size. The built-in defaults are 1, 3, 6, 12, 24,
+and 48 feet for Tiny through Gargantuan, respectively. Unlisted custom sizes
+default to 6 feet. Width follows the cropped cutout's aspect ratio. The `scale`
+reference heights in inches apply to the portrait frames.
+
+The lineup uses one foot between creatures, one foot of padding on the right,
+and 1.5 feet at the top. The left padding starts at 1.5 feet, or 2 feet when
+the tallest creature exceeds 10 feet, and grows to fit the height labels.
+The template background fills the lineup and is
+center-cropped to fit.
+
+The bottom margin fits the tallest wrapped name, half a line of space, the
+token badge row, and another half line of space. The optional `token_badge`
+template field names an image relative to the template file. Every creature
+currently uses the base badge size of 1.5 feet square.
+The whole composition is drawn directly onto the PDF, centered and scaled
+uniformly to fit within `marginInches`.
+
+A height grid sits between the background and the cutouts. Its left axis starts
+at the inner margin, and the cutouts share a baseline 0.33 scaled feet below
+the grid's bottom axis. Horizontal
+lines mark each whole foot up to the tallest creature. The axes and grid use
+60% opacity, with 1.5-point strokes for regular lines, 3-point strokes at
+every five feet, and 4.5-point strokes at every ten feet.
+The vertical axis is labeled every foot when the tallest creature is under
+10 feet and every five feet otherwise. Labels include the unit, as in `5 ft`.
+Each creature's name is centered below its portrait and wraps at spaces to fit
+within 75% of the portrait width. Long individual words are narrowed to fit.
+
+Before placing a portrait on a card or in the lineup, PLMH scans outward from
+the image center for the first row or column on each side with no pixels at
+alpha 2 or higher (out of 255). Those rows and columns define the crop.
+Pixels inside the crop keep their original alpha. The crop applies only to
+portraits.
 
 ## Text field layout
 
@@ -64,8 +113,9 @@ The region height determines the font size; the string is centered in both
 dimensions. If its measured width exceeds the region width, it is horizontally
 compressed to fit while retaining the height-derived font size. Region values
 come from the background canvas's pixel coordinates, so the caller supplies
-the image scale in points per pixel and its page origin. Text uses the same built-in
-Helvetica metrics strategy as DMSH to avoid platform-dependent font measurement.
+the image scale in points per pixel and its page origin. Field height and
+baseline use built-in Helvetica metrics. Libre Baskerville labels use the
+bundled face to measure their width.
 
 ## Portrait filenames
 

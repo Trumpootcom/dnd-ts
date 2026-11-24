@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "template": "Nameplate - Default",
+  "title": "Portrait Nameplates",
+  // Uncomment exactly one font option.
+  // "font": "Libre Baskerville",
+  "font": "Libre Baskerville Bold",
+  // "font": "Georgia Bold",
+  // "font": "Cinzel ExtraBold",
+  // "font": "Helvetica",
+  // "font": "Times",
+  // "font": "Courier",
+  "size": {
+    "width": 1000,
+    "height": 1400
+  },
+  "background": {
+    "image": "bg_parchment.png"
+  },
+  "frame": {
+    "image": "frame_default.png"
+  },
+  "scale": {
+    "min_ht": 0.4,
+    "tiny": 96,
+    "small": 96,
+    "medium": 96,
+    "large": 192,
+    "huge": 384,
+    "gargantuan": 600
+  },
+  "token_badge": "token.png",
+  "lineupFrame": {
+    "topLeft": "11.png",
+    "top": "21.png",
+    "left": "12.png",
+    "bottomLeft": "13.png",
+    "bottom": "23.png",
+    "sideOverhangPixels": 38,
+    "sideBackgroundBleedPixels": 9,
+    "topOverhangPixels": 30,
+    "bottomExtensionPixels": 267,
+    "titleBand": { "top": 235, "height": 175 }
+  },
+  "defaultHeightFeet": {
+    "tiny": 1,
+    "small": 3,
+    "medium": 6,
+    "large": 12,
+    "huge": 24,
+    "gargantuan": 48
+  },
+  "regions": {
+    "token_id": { "L": 769, "T": 72, "W": 160, "H": 180 },
+    "portrait": { "L": 30, "T": 80, "W": 940, "H": 1050 },
+    "name": { "L": 118, "T": 1178, "W": 767, "H": 94 },
+    "size_type": { "L": 118, "T": 1280, "W": 767, "H": 48 }
+  },
+  "page": {
+    "size": "ledger",
+    "orientation": "landscape",
+    "marginInches": 0.25,
+    "columnGapInches": 0.1,
+    "rowGapInches": 0.25,
+    "columns": 4,
+    "rows": 1,
+    "placement": "topLeft"
+  }
+}

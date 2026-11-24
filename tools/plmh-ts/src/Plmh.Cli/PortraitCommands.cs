@@ -151,13 +151,16 @@ internal static class PortraitCommands
         if (File.Exists(direct))
             return direct;
 
-        var fileName = Path.HasExtension(name) ? name : name + ".json";
-        var candidates = new[]
+        string[] fileNames = Path.HasExtension(name) ? [name] : [name + ".jsonc", name + ".json"];
+        var directories = new[]
         {
-            Path.Combine(root, "tools", "plmh-ts", "src", "Plmh.Cli", "Templates", fileName),
-            Path.Combine(AppContext.BaseDirectory, "Templates", fileName),
-            Path.Combine(AppContext.BaseDirectory, fileName)
+            Path.Combine(root, "tools", "plmh-ts", "src", "Plmh.Cli", "Templates"),
+            Path.Combine(AppContext.BaseDirectory, "Templates"),
+            AppContext.BaseDirectory
         };
+        var candidates = from directory in directories
+                         from fileName in fileNames
+                         select Path.Combine(directory, fileName);
         return candidates.FirstOrDefault(File.Exists)
             ?? throw new FileNotFoundException($"Template not found: {name}");
     }
