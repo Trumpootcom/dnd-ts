@@ -7,7 +7,7 @@ internal static class PortraitCommands
         ".jpg", ".jpeg", ".png", ".bmp", ".webp"
     };
 
-    public static int Batch(string? templateArgument)
+    public static int Batch(string? templateArgument, int imageDpi = PortraitPdfExporter.DefaultImageDpi)
     {
         var root = FindProjectRoot();
         var incoming = Path.Combine(root, "in_portraits");
@@ -81,7 +81,7 @@ internal static class PortraitCommands
             {
                 var safeEncounter = SafeFilePart(encounterId);
                 var pdf = Path.Combine(output, $"encounter_{safeEncounter.ToLowerInvariant()}.pdf");
-                return RenderGroup(template, templatePath, encounterPortraits, pdf, root);
+                return RenderGroup(template, templatePath, encounterPortraits, pdf, root, imageDpi);
             }
             catch (Exception error)
             {
@@ -92,7 +92,7 @@ internal static class PortraitCommands
         }
     }
 
-    public static int Single(string imagePath, string? templateArgument)
+    public static int Single(string imagePath, string? templateArgument, int imageDpi)
     {
         var root = FindProjectRoot();
         try
@@ -101,7 +101,7 @@ internal static class PortraitCommands
             WriteTemplateStatus(template, templatePath, root);
             var portrait = PortraitFileName.Parse(Path.GetFullPath(imagePath));
             var pdf = Path.ChangeExtension(portrait.Path, ".pdf");
-            return RenderGroup(template, templatePath, [portrait], pdf, root) ? 0 : 1;
+            return RenderGroup(template, templatePath, [portrait], pdf, root, imageDpi) ? 0 : 1;
         }
         catch (Exception error)
         {
@@ -111,13 +111,13 @@ internal static class PortraitCommands
     }
 
     private static bool RenderGroup(PortraitTemplate template, string templatePath,
-        IReadOnlyList<PortraitFileName> portraits, string pdf, string root)
+        IReadOnlyList<PortraitFileName> portraits, string pdf, string root, int imageDpi)
     {
         var temporary = Path.Combine(Path.GetDirectoryName(pdf)!, $".{Path.GetFileName(pdf)}.{Guid.NewGuid():N}.tmp");
         try
         {
             using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                PortraitPdfExporter.Export(template, templatePath, portraits, output);
+                PortraitPdfExporter.Export(template, templatePath, portraits, output, imageDpi);
             File.Move(temporary, pdf, overwrite: true);
             foreach (var portrait in portraits)
                 Console.WriteLine($"Processing image: {DisplayPath(root, portrait.Path)} -> {DisplayPath(root, pdf)}");

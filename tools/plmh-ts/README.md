@@ -17,9 +17,21 @@ Examples:
 ```bat
 bin\process_portraits.bat
 bin\process_portraits.bat batch
+bin\process_portraits.bat batch --dpi 150
 bin\process_portraits.bat "in_portraits\e1_a2_Hadran Pell_medium_chondathan male.png"
 bin\process_portraits.bat --template T000 "in_portraits\e1_a2_Hadran Pell_medium_chondathan male.png"
 ```
+
+PDF exports default to 150 DPI for raster images, based on their printed
+dimensions. Use `--dpi 300` for more image detail or `--dpi 0` to disable
+downsampling. The option works in batch and single-image mode. Images already
+below the target resolution are kept at their current resolution, and PDF text
+stays vector-based.
+
+Opaque backgrounds use high-quality JPEG with full chroma resolution.
+Portraits, frames, badges, and backgrounds with transparency use lossless
+compression. The exporter trims image pixels outside the visible clipping
+area while retaining a small border for interpolation.
 
 ## Project layout
 
