@@ -7,11 +7,15 @@ public sealed record PortraitTemplate(
     int SchemaVersion,
     string Template,
     string Title,
+    CanvasSizeTemplate Size,
     BackgroundTemplate Background,
     FrameTemplate Frame,
     RegionsTemplate Regions,
     PageTemplate Page)
 {
+    [JsonPropertyName("scale")]
+    public ScaleTemplate Scale { get; init; } = new();
+
     public static PortraitTemplate Read(Stream json)
     {
         var template = JsonSerializer.Deserialize<PortraitTemplate>(json, JsonSerializerOptions.Web)
@@ -26,17 +30,19 @@ public sealed record PortraitTemplate(
             throw new ArgumentException($"Unsupported template schema version {SchemaVersion}.");
         if (string.IsNullOrWhiteSpace(Template) || string.IsNullOrWhiteSpace(Title))
             throw new ArgumentException("Template name and title are required.");
-        if (Background is null || string.IsNullOrWhiteSpace(Background.Image)
-            || Background.Width <= 0 || Background.Height <= 0)
-            throw new ArgumentException("Background image and positive pixel dimensions are required.");
-        if (Frame is null || string.IsNullOrWhiteSpace(Frame.Image) || Frame.Width <= 0 || Frame.Height <= 0)
-            throw new ArgumentException("Frame image and positive pixel dimensions are required.");
-        var canvasAspect = (double)Background.Width / Background.Height;
-        var frameAspect = (double)Frame.Width / Frame.Height;
-        if (Math.Abs(canvasAspect - frameAspect) > 0.001)
-            throw new ArgumentException("Background and frame images must have matching aspect ratios.");
+        if (Background is null || string.IsNullOrWhiteSpace(Background.Image))
+            throw new ArgumentException("Background image is required.");
+        if (Size is null || Size.Width <= 0 || Size.Height <= 0)
+            throw new ArgumentException("Template size must define positive width and height.");
+        if (Frame is null || string.IsNullOrWhiteSpace(Frame.Image))
+            throw new ArgumentException("Frame image is required.");
         if (Regions is null || Page is null)
             throw new ArgumentException("Template regions and page settings are required.");
+        if (Scale is null || !double.IsFinite(Scale.MinHeight) || Scale.MinHeight < 0 || Scale.MinHeight > 1)
+            throw new ArgumentException("Template scale.min_ht must be between 0 and 1.");
+        if (Scale.Heights.Any(pair => string.IsNullOrWhiteSpace(pair.Key)
+            || !double.IsFinite(pair.Value) || pair.Value <= 0))
+            throw new ArgumentException("Template size scales must have nonempty names and positive finite heights.");
         if (Regions.TokenId is null || Regions.Portrait is null || Regions.Name is null || Regions.SizeType is null)
             throw new ArgumentException("Template must define token_id, portrait, name, and size_type regions.");
         Regions.TokenId.Validate(nameof(Regions.TokenId));
@@ -45,7 +51,7 @@ public sealed record PortraitTemplate(
         Regions.SizeType.Validate(nameof(Regions.SizeType));
         foreach (var region in new[] { Regions.TokenId, Regions.Portrait, Regions.Name, Regions.SizeType })
         {
-            if (region.L + region.W > Background.Width || region.T + region.H > Background.Height)
+            if (region.L + region.W > Size.Width || region.T + region.H > Size.Height)
                 throw new ArgumentException("A template region falls outside the background canvas dimensions.");
         }
         if (Page.Size.ToLowerInvariant() is not ("letter" or "legal" or "ledger"))
@@ -64,9 +70,26 @@ public sealed record PortraitTemplate(
     }
 }
 
-public sealed record BackgroundTemplate(string Image, int Width, int Height);
+public sealed record BackgroundTemplate(string Image);
 
-public sealed record FrameTemplate(string Image, int Width, int Height);
+public sealed record CanvasSizeTemplate(int Width, int Height);
+
+public sealed record FrameTemplate(string Image);
+
+public sealed record ScaleTemplate
+{
+    [JsonPropertyName("min_ht")]
+    public double MinHeight { get; init; }
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement> Extra { get; init; } = new();
+
+    [JsonIgnore]
+    public Dictionary<string, double> Heights => Extra.ToDictionary(
+        pair => pair.Key,
+        pair => pair.Value.GetDouble(),
+        StringComparer.OrdinalIgnoreCase);
+}
 
 public sealed record RegionsTemplate(
     [property: JsonPropertyName("token_id")] TemplateRegion TokenId,

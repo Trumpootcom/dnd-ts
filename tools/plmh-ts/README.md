@@ -30,16 +30,17 @@ bin\process_portraits.bat --template T000 "in_portraits\e1_a2_Hadran Pell_medium
 
 ## Template
 
-Templates use schema version 1. `T000.json` defines a background image and a
-frame image, each with source pixel dimensions, portrait and text placement
-rectangles, and paper size, orientation, margins, and placement. Region
-coordinates and dimensions are in background-canvas pixels measured from the
-top-left. Image paths are resolved relative to the template JSON file.
+Templates use schema version 1. `T000.json` defines shared canvas dimensions
+under `size`, background and frame image paths, portrait and text placement
+rectangles, and paper size, orientation, margins, and placement. Both images
+are resized to `size.width` and `size.height` when loaded. Region coordinates
+and dimensions use those canvas pixels, measured from the top-left. Image
+paths are resolved relative to the template JSON file.
 
 The exporter creates Letter, Legal, or Ledger PDFs with portrait cards placed
 in the configured row and column grid. The grid starts at the top-left page
 margin; partial rows stay left-aligned and the first row starts at the top
-margin. Cards preserve the background canvas aspect ratio within each slot. It draws the
+margin. Cards preserve the frame canvas aspect ratio within each slot. It draws the
 background, fits the portrait inside its region, draws the frame over the
 portrait, then draws token ID, name, and size/type in their configured regions.
 Text height follows each region's height and long text is horizontally
@@ -50,6 +51,11 @@ single row has three cards. Each card is 3⅓″ wide by 4⅔″ high at a 5:7 a
 ratio. Batch mode groups portraits by the first filename field and writes one
 PDF per encounter, such as `out/encounter_e1.pdf`; additional cards continue on
 new pages in that encounter PDF.
+
+Before placement, PLMH crops fully transparent outer padding from portrait
+images using the bounding box of pixels with nonzero alpha. Visible and
+partially transparent edge pixels are preserved. Background and frame images
+are not cropped.
 
 ## Text field layout
 
@@ -73,10 +79,14 @@ For example:
 
 ```text
 e1_f1_mistborn dragon_medium_dragon.jpg
+e1_f2_mistborn giant_medium(5-0)_dragon.jpg
 ```
 
-This gives encounter ID `e1`, token ID `f1`, name `mistborn dragon`, size
-`medium`, and creature type `dragon`. Underscores (`_`) are reserved as field
+The first example gives encounter ID `e1`, token ID `f1`, name `mistborn dragon`, size
+`medium`, and creature type `dragon`. The second adds a 5-foot height to the
+size field. Height is optional and accepts feet alone or `feet-inches`
+notation, with inches from 0 to 11 (`medium(5)` equals `medium(5-0)`).
+Underscores (`_`) are reserved as field
 separators; spaces are allowed within the name. The parser reads the first two
 fields as encounter and token IDs, the final two fields as size and creature
 type, and joins the fields between them as the name. Standard D&D size
@@ -90,6 +100,14 @@ For display, token IDs are uppercased (`f1` becomes `F1`). Names and the
 combined size and creature type use title case (`mistborn dragon` becomes
 `Mistborn Dragon`; `medium dragon` becomes `Medium Dragon`).
 
+When height is provided, the exporter scales the cropped visible image by its
+height in inches divided by the template's reference height for that creature
+size. The default template uses 96 inches for Tiny, Small, and Medium; 192 for
+Large; 384 for Huge; and 600 for Gargantuan. The height is also shown in the
+size/type label. `scale.min_ht` sets the minimum relative scale; the default
+template uses `0.4`. Without a height suffix, the portrait fits the configured
+portrait region and the template scale map is not used.
+
 `Plmh.Core.PortraitFileName.Parse(path)` parses this convention and returns the
 full image path with encounter ID, token ID, name, size, and creature type.
 Parsing applies the display capitalization rules to token ID, name, size, and
@@ -101,3 +119,7 @@ extension is not restricted by the parser.
 Filename parsing, template loading, portrait composition, PDF export, encounter
 grouping, and per-image status reporting are implemented. Batch mode writes one
 PDF per encounter to `out/`; single-image mode writes one PDF beside the source.
+
+## TODO
+
+- Make the small-caps letter scale configurable in the template.

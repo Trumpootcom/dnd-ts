@@ -61,6 +61,55 @@ internal sealed class PdfTextCanvas(PdfPage page)
             $"q {color.R / 255d:0.######} {color.G / 255d:0.######} {color.B / 255d:0.######} rg BT {font} {size:0.######} Tf {widthScale * 100:0.######} Tz {matrix} {x:0.######} {page.Height.Point - baseline:0.######} Tm <{hex}> Tj ET Q"));
     }
 
+    public void DrawSmallCaps(XGraphics graphics, string text, double size, bool bold, XColor color,
+        double x, double baseline, double maxWidth, double smallScale = 0.72)
+    {
+        if (text.Length == 0 || size <= 0 || maxWidth <= 0) return;
+
+        var runs = new List<(string Text, double Size)>();
+        var current = new StringBuilder();
+        var currentSize = size;
+        var firstLetterInWord = true;
+        foreach (var character in text)
+        {
+            if (char.IsWhiteSpace(character))
+            {
+                Append(character, size);
+                firstLetterInWord = true;
+                continue;
+            }
+
+            var isLetter = char.IsLetter(character);
+            var glyphSize = isLetter && !firstLetterInWord ? size * smallScale : size;
+            Append(char.ToUpperInvariant(character), glyphSize);
+            if (isLetter) firstLetterInWord = false;
+        }
+        Flush();
+
+        var measuredWidth = runs.Sum(run => Measure(run.Text, run.Size, bold));
+        var widthScale = Math.Min(1, maxWidth / measuredWidth);
+        var drawX = x + (maxWidth - measuredWidth * widthScale) / 2;
+        foreach (var run in runs)
+        {
+            Draw(graphics, run.Text, run.Size, bold, color, drawX, baseline, widthScale: widthScale);
+            drawX += Measure(run.Text, run.Size, bold) * widthScale;
+        }
+
+        void Append(char character, double glyphSize)
+        {
+            if (current.Length > 0 && currentSize != glyphSize) Flush();
+            if (current.Length == 0) currentSize = glyphSize;
+            current.Append(character);
+        }
+
+        void Flush()
+        {
+            if (current.Length == 0) return;
+            runs.Add((current.ToString(), currentSize));
+            current.Clear();
+        }
+    }
+
     public void Finish()
     {
         if (commands.Count == 0)

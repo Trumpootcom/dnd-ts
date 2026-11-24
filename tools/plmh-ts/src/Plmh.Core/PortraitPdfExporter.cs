@@ -21,8 +21,10 @@ public static class PortraitPdfExporter
             Path.GetDirectoryName(Path.GetFullPath(templatePath))!);
         var framePath = Path.GetFullPath(template.Frame.Image,
             Path.GetDirectoryName(Path.GetFullPath(templatePath))!);
-        using var backgroundData = ReadImage(backgroundPath, template.Background.Width, template.Background.Height);
-        using var frameData = ReadImage(framePath, template.Frame.Width, template.Frame.Height);
+        using var backgroundData = ReadImage(backgroundPath, template.Size.Width, template.Size.Height,
+            resizeToExpected: true);
+        using var frameData = ReadImage(framePath, template.Size.Width, template.Size.Height,
+            resizeToExpected: true);
         using var background = XImage.FromStream(backgroundData);
         using var frame = XImage.FromStream(frameData);
         using var document = new PdfDocument();
@@ -63,21 +65,27 @@ public static class PortraitPdfExporter
                     var rowStart = margin;
                     var cellX = rowStart + column * (cellWidth + gapX);
                     var cellY = gridTop + row * (cellHeight + gapY);
-                    var scale = Math.Min(cellWidth / template.Background.Width,
-                        cellHeight / template.Background.Height);
-                    var cardWidth = template.Background.Width * scale;
-                    var cardHeight = template.Background.Height * scale;
+                    var scale = Math.Min(cellWidth / template.Size.Width,
+                        cellHeight / template.Size.Height);
+                    var cardWidth = template.Size.Width * scale;
+                    var cardHeight = template.Size.Height * scale;
                     var cardX = cellX;
                     var cardY = cellY;
 
                     using var portraitData = ReadImage(portrait.Path, cropTransparentPadding: true);
                     using var image = XImage.FromStream(portraitData);
+                    var portraitScale = portrait.HeightInches is { } heightInches
+                        ? template.Scale.MinHeight + (1 - template.Scale.MinHeight)
+                            * (heightInches / GetReferenceHeight(template, portrait.Size))
+                        : 1d;
+                    var portraitRegion = template.Regions.Portrait;
+                    var imageBounds = GetFittedImageBounds(image, cardX, cardY, portraitRegion, scale, portraitScale);
                     graphics.DrawImage(background, cardX, cardY, cardWidth, cardHeight);
-                    DrawFittedImage(graphics, image, cardX, cardY, template.Regions.Portrait, scale);
+                    DrawFittedImage(graphics, image, imageBounds, cardX, cardY, portraitRegion, scale);
                     graphics.DrawImage(frame, cardX, cardY, cardWidth, cardHeight);
                     DrawText(portrait.TokenId, template.Regions.TokenId, bold: true);
-                    DrawText(portrait.Name, template.Regions.Name, bold: true);
-                    DrawText($"{portrait.Size} {portrait.Type}", template.Regions.SizeType, bold: false);
+                    DrawSmallCaps(portrait.Name, template.Regions.Name, bold: true);
+                    DrawSmallCaps($"{portrait.Size} {portrait.Type}", template.Regions.SizeType, bold: false);
 
                     void DrawText(string value, TemplateRegion region, bool bold)
                     {
@@ -86,6 +94,15 @@ public static class PortraitPdfExporter
                             XColor.FromArgb(255, 244, 214), placement.X, placement.Baseline,
                             widthScale: placement.HorizontalScale);
                     }
+
+                    void DrawSmallCaps(string value, TemplateRegion region, bool bold)
+                    {
+                        var placement = TextFieldLayout.Fit(value, region.ToPixelRegion(), cardX, cardY, scale, bold);
+                        text.DrawSmallCaps(graphics, PdfTextCanvas.Normalize(value), placement.FontSize, bold,
+                            XColor.FromArgb(255, 244, 214), cardX + region.L * scale, placement.Baseline,
+                            region.W * scale);
+                    }
+
                 }
                 graphics.Dispose();
                 text.Finish();
@@ -95,22 +112,44 @@ public static class PortraitPdfExporter
         document.Save(destination, false);
     }
 
-    private static void DrawFittedImage(XGraphics graphics, XImage image, double cardX, double cardY,
+    private static double GetReferenceHeight(PortraitTemplate template, string size)
+    {
+        foreach (var pair in template.Scale.Heights)
+            if (string.Equals(pair.Key, size, StringComparison.OrdinalIgnoreCase))
+                return pair.Value;
+        throw new InvalidDataException($"Template has no reference height configured for size '{size}'.");
+    }
+
+    private static XRect GetFittedImageBounds(XImage image, double cardX, double cardY,
+        TemplateRegion region, double scale, double portraitScale)
+    {
+        var x = cardX + region.L * scale;
+        var y = cardY + region.T * scale;
+        var width = region.W * scale;
+        var height = region.H * scale;
+        var imageScale = height / image.PixelHeight * portraitScale;
+        var drawWidth = image.PixelWidth * imageScale;
+        var drawHeight = image.PixelHeight * imageScale;
+        var drawX = x + (width - drawWidth) / 2;
+        var drawY = y + height - drawHeight;
+        return new XRect(drawX, drawY, drawWidth, drawHeight);
+    }
+
+    private static void DrawFittedImage(XGraphics graphics, XImage image, XRect imageBounds, double cardX, double cardY,
         TemplateRegion region, double scale)
     {
         var x = cardX + region.L * scale;
         var y = cardY + region.T * scale;
         var width = region.W * scale;
         var height = region.H * scale;
-        var imageScale = Math.Min(width / image.PixelWidth, height / image.PixelHeight);
-        var drawWidth = image.PixelWidth * imageScale;
-        var drawHeight = image.PixelHeight * imageScale;
-        graphics.DrawImage(image, x + (width - drawWidth) / 2,
-            y + (height - drawHeight) / 2, drawWidth, drawHeight);
+        var state = graphics.Save();
+        graphics.IntersectClip(new XRect(x, y, width, height));
+        graphics.DrawImage(image, imageBounds.X, imageBounds.Y, imageBounds.Width, imageBounds.Height);
+        graphics.Restore(state);
     }
 
     private static MemoryStream ReadImage(string path, int? expectedWidth = null, int? expectedHeight = null,
-        bool cropTransparentPadding = false)
+        bool cropTransparentPadding = false, bool resizeToExpected = false)
     {
         if (!File.Exists(path))
             throw new FileNotFoundException("Image file not found.", path);
@@ -125,15 +164,31 @@ public static class PortraitPdfExporter
         if (codec.Info.Width <= 0 || codec.Info.Height <= 0
             || (long)codec.Info.Width * codec.Info.Height > 24_000_000)
             throw new InvalidDataException("Image dimensions are invalid or exceed 24 megapixels.");
-        if (expectedWidth is { } width && (codec.Info.Width != width || codec.Info.Height != expectedHeight))
+        if (expectedWidth is { } width && !resizeToExpected
+            && (codec.Info.Width != width || codec.Info.Height != expectedHeight))
             throw new InvalidDataException($"Image dimensions are {codec.Info.Width}x{codec.Info.Height}; template specifies {width}x{expectedHeight}.");
         using var bitmap = SKBitmap.Decode(codec)
             ?? throw new InvalidDataException($"Image pixels could not be decoded: {path}");
-        using var cropped = cropTransparentPadding ? CropTransparentPadding(bitmap) : null;
-        var imageToEncode = cropped ?? bitmap;
+        using var resized = resizeToExpected && expectedWidth is { } targetWidth
+            && expectedHeight is { } targetHeight
+            && (bitmap.Width != targetWidth || bitmap.Height != targetHeight)
+                ? Resize(bitmap, targetWidth, targetHeight)
+                : null;
+        var decodedImage = resized ?? bitmap;
+        using var cropped = cropTransparentPadding ? CropTransparentPadding(decodedImage) : null;
+        var imageToEncode = cropped ?? decodedImage;
         using var encoded = imageToEncode.Encode(SKEncodedImageFormat.Png, 100)
             ?? throw new InvalidDataException("Image could not be converted for PDF output.");
         return new MemoryStream(encoded.ToArray(), writable: false);
+    }
+
+    private static SKBitmap Resize(SKBitmap source, int width, int height)
+    {
+        var result = new SKBitmap(width, height, source.ColorType, source.AlphaType);
+        using var canvas = new SKCanvas(result);
+        canvas.DrawBitmap(source, new SKRect(0, 0, width, height));
+        canvas.Flush();
+        return result;
     }
 
     private static SKBitmap? CropTransparentPadding(SKBitmap source)
