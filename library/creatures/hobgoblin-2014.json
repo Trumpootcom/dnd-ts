@@ -1,0 +1,7 @@
+{
+  "name": "Hobgoblin",
+  "size": "medium",
+  "type": "humanoid",
+  "portrait": "../portraits/hobgoblin-2014.png",
+  "height": "6-2"
+}

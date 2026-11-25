@@ -5,7 +5,10 @@ namespace Dmsh.Core;
 
 public static class MapPdfExporter
 {
-    public static void Export(MapTemplate template, string imagePath, Stream destination)
+    public static void Export(MapTemplate template, string imagePath, Stream destination) =>
+        Export(template, imagePath, destination, null);
+
+    public static void Export(MapTemplate template, string imagePath, Stream destination, string? overviewTitle)
     {
         using var jpeg = WorkingImage.CreateJpeg(imagePath);
         using var image = XImage.FromStream(jpeg);
@@ -57,7 +60,7 @@ public static class MapPdfExporter
                     new XRect(left + sheet.Left * scale, top + sheet.Top * scale,
                         plan.PrintableWidth * scale, plan.PrintableHeight * scale), Math.Min(1, scale));
             OverviewPanel.Draw(graphics, text, template, plan, pageHeight, panelWidth, tableScale,
-                Path.GetFileNameWithoutExtension(imagePath));
+                overviewTitle ?? Path.GetFileNameWithoutExtension(imagePath), fitFullTitle: overviewTitle is not null);
             graphics.Dispose();
             text.Finish();
         }

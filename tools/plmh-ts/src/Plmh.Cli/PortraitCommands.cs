@@ -31,8 +31,14 @@ public static class PortraitCommands
         RenderBatch(images, output, templatePath, root, PortraitPdfExporter.DefaultImageDpi, strict: true,
             lineupTitleForEncounter: lineupTitleForEncounter);
 
+    public static int BuildAdventurePortraits(IReadOnlyList<PortraitFileName> portraits, string output,
+        string templatePath, string root, Func<string, string?> lineupTitleForEncounter) =>
+        RenderBatch([], output, templatePath, root, PortraitPdfExporter.DefaultImageDpi, strict: true,
+            lineupTitleForEncounter: lineupTitleForEncounter, explicitPortraits: portraits);
+
     private static int RenderBatch(IEnumerable<string> images, string output, string? templateArgument,
-        string root, int imageDpi, bool strict, Func<string, string?>? lineupTitleForEncounter = null)
+        string root, int imageDpi, bool strict, Func<string, string?>? lineupTitleForEncounter = null,
+        IReadOnlyList<PortraitFileName>? explicitPortraits = null)
     {
         PortraitTemplate template;
         string templatePath;
@@ -49,7 +55,7 @@ public static class PortraitCommands
         WriteTemplateStatus(template, templatePath, root);
 
         Directory.CreateDirectory(output);
-        var portraits = new List<PortraitFileName>();
+        var portraits = explicitPortraits?.ToList() ?? [];
         var exitCode = 0;
         var outputNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var image in images
@@ -138,7 +144,17 @@ public static class PortraitCommands
         {
             using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                 PortraitPdfExporter.Export(template, templatePath, portraits, output, imageDpi, lineupTitle);
-            File.Move(temporary, pdf, overwrite: true);
+            try
+            {
+                File.Move(temporary, pdf, overwrite: true);
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                Console.Error.WriteLine($"Could not save {DisplayPath(root, pdf)}. {error.Message}");
+                if (File.Exists(pdf))
+                    Console.Error.WriteLine("If the PDF is open in a viewer or preview pane, close it and rerun the command.");
+                return false;
+            }
             foreach (var portrait in portraits)
                 Console.WriteLine($"Processing image: {DisplayPath(root, portrait.Path)} -> {DisplayPath(root, pdf)}");
             return true;

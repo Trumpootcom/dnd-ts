@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "template": "Nameplate - Default",
+  "template": "Ledger Landscape - Default",
   "title": "Portrait Nameplates",
   // Uncomment exactly one font option.
   // "font": "Libre Baskerville",
@@ -40,7 +40,7 @@
     "sideBackgroundBleedPixels": 9,
     "topOverhangPixels": 30,
     "bottomExtensionPixels": 267,
-    "titleBand": { "top": 235, "height": 175 }
+    "titleBand": { "top": 245, "height": 160 }
   },
   "defaultHeightFeet": {
     "tiny": 1,

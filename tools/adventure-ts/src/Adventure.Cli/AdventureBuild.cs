@@ -12,7 +12,7 @@ internal static class AdventureBuild
     private static readonly Regex PortraitEncounter = new(@"^e(?<number>[0-9]+)$", RegexOptions.IgnoreCase);
     private static readonly Regex MapDimensions = new(@"[0-9]+[xX][0-9]+\z");
 
-    public static int Run(string root, string title, string date, AdventureTemplate template)
+    public static int Run(string root, string title, string date, AdventureTemplate template, AdventureFile? adventure)
     {
         var lockRoot = OperatingSystem.IsWindows() ? root.ToUpperInvariant() : root;
         var lockKey = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(lockRoot)));
@@ -29,7 +29,7 @@ internal static class AdventureBuild
 
         try
         {
-            return Build(root, title, date, template);
+            return Build(root, title, date, template, adventure);
         }
         finally
         {
@@ -37,10 +37,12 @@ internal static class AdventureBuild
         }
     }
 
-    private static int Build(string root, string title, string date, AdventureTemplate template)
+    private static int Build(string root, string title, string date, AdventureTemplate template, AdventureFile? adventure)
     {
-        var maps = Inputs(Path.Combine(root, "in_maps"), RenderCommands.IsImage);
-        var portraits = Inputs(Path.Combine(root, "in_portraits"), PortraitCommands.IsImage);
+        var maps = adventure?.Maps.Select(map => map.Image).ToArray()
+            ?? Inputs(Path.Combine(root, "in_maps"), RenderCommands.IsImage);
+        var portraits = adventure?.Portraits.Select(portrait => portrait.Path).ToArray()
+            ?? Inputs(Path.Combine(root, "in_portraits"), PortraitCommands.IsImage);
         if (maps.Length + portraits.Length == 0)
         {
             Console.Error.WriteLine("No supported images in in_maps/ or in_portraits/.");
@@ -51,7 +53,7 @@ internal static class AdventureBuild
         var outputRoot = Path.Combine(root, "out");
         var destination = Path.Combine(outputRoot, name);
         var archive = Path.Combine(root, "bak", date + "-" + string.Concat(title.Where(c => !char.IsWhiteSpace(c))));
-        var inputs = maps.Concat(portraits).Select(SourceFile.Read).ToArray();
+        var inputs = maps.Concat(portraits).Distinct(StringComparer.Ordinal).Select(SourceFile.Read).ToArray();
         Console.WriteLine($"Adventure: {name} | Date: {date} | Template: {template.Name}");
         Directory.CreateDirectory(outputRoot);
         var stage = Directory.CreateDirectory(Path.Combine(outputRoot, ".adventure-" + Guid.NewGuid().ToString("N")));
@@ -61,30 +63,45 @@ internal static class AdventureBuild
             var outputStage = Directory.CreateDirectory(Path.Combine(stage.FullName, "publish"));
             var mapOutput = Path.Combine(stage.FullName, "maps");
             var portraitOutput = Path.Combine(stage.FullName, "portraits");
-            var mapStatus = maps.Length == 0 ? 0 :
-                RenderCommands.BuildAdventureMaps(maps, mapOutput, template.MapTemplate, root);
-            var mapNames = maps.Select(path => Path.GetFileNameWithoutExtension(path))
-                .Select(stem => (Encounter: EncounterNumber(stem, MapEncounter),
-                    Name: MapDimensions.Replace(stem, "").TrimEnd(' ', '_', '-')))
-                .Where(map => map.Encounter.HasValue && map.Name.Length > 0)
-                .ToLookup(map => map.Encounter, map => map.Name);
-            var portraitStatus = portraits.Length == 0 ? 0 :
-                PortraitCommands.BuildAdventurePortraits(portraits, portraitOutput, template.PortraitsTemplate, root,
-                    encounter =>
-                    {
-                        var names = mapNames[EncounterNumber(encounter, PortraitEncounter)]
-                            .Distinct(StringComparer.OrdinalIgnoreCase).Take(2).ToArray();
-                        return names.Length == 1 ? $"{title} - {names[0]}" : null;
-                    });
-            if (mapStatus != 0 || portraitStatus != 0)
+            PdfOutput[]? pdfs = adventure is null
+                ? RenderStaged(maps, portraits, mapOutput, portraitOutput, template, root, title)
+                : RenderAdventure(adventure, mapOutput, portraitOutput, template, root);
+            if (pdfs is null)
             {
                 Console.Error.WriteLine("Adventure build failed. Review the errors above.");
                 return 1;
             }
             CheckSources(inputs);
 
-            var pdfs = GetPdfs(mapOutput, isPortrait: false).Concat(GetPdfs(portraitOutput, isPortrait: true)).ToArray();
-            if (template.IndividualPdf)
+            if (adventure is not null)
+            {
+                foreach (var encounter in adventure.Encounters)
+                {
+                    var encounterPdfs = pdfs.Where(pdf => pdf.Encounter == encounter.Value.Number).ToArray();
+                    if (template.IndividualPdf)
+                    {
+                        WriteEncounterPdf(encounterPdfs.Where(pdf => !pdf.IsPortrait).ToArray(), "Maps");
+                        WriteEncounterPdf(encounterPdfs.Where(pdf => pdf.IsPortrait).ToArray(), "Portraits");
+                    }
+                    else
+                    {
+                        WriteEncounterPdf(encounterPdfs, "Adventure");
+                    }
+
+                    void WriteEncounterPdf(PdfOutput[] files, string kind)
+                    {
+                        if (files.Length == 0)
+                            return;
+                        var path = Path.Combine(outputStage.FullName,
+                            $"{encounter.Key} - {encounter.Value.Name} - {kind}.pdf");
+                        if (template.IndividualPdf && files.Length == 1)
+                            File.Move(files[0].Path, path);
+                        else
+                            Merge(files, path, title, date, template.MergeOrder);
+                    }
+                }
+            }
+            else if (template.IndividualPdf)
             {
                 var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var pdf in pdfs)
@@ -107,6 +124,9 @@ internal static class AdventureBuild
             foreach (var filename in filenames)
                 Console.WriteLine($"  {filename}");
 
+            if (adventure is not null)
+                return 0;
+
             CheckArchive(inputs, archive);
             Console.Write($"Archive all source images to {Path.GetRelativePath(root, archive)}? [y/N] ");
             var answer = Console.ReadLine()?.Trim();
@@ -126,6 +146,52 @@ internal static class AdventureBuild
         {
             CleanDirectory(stage.FullName);
         }
+    }
+
+    private static PdfOutput[]? RenderStaged(string[] maps, string[] portraits, string mapOutput,
+        string portraitOutput, AdventureTemplate template, string root, string title)
+    {
+        var mapStatus = maps.Length == 0 ? 0 :
+            RenderCommands.BuildAdventureMaps(maps, mapOutput, template.MapTemplate, root);
+        var mapNames = maps.Select(path => Path.GetFileNameWithoutExtension(path))
+            .Select(stem => (Encounter: EncounterNumber(stem, MapEncounter),
+                Name: MapDimensions.Replace(stem, "").TrimEnd(' ', '_', '-')))
+            .Where(map => map.Encounter.HasValue && map.Name.Length > 0)
+            .ToLookup(map => map.Encounter, map => map.Name);
+        var portraitStatus = portraits.Length == 0 ? 0 :
+            PortraitCommands.BuildAdventurePortraits(portraits, portraitOutput, template.PortraitsTemplate, root,
+                encounter => LineupTitle(title, mapNames[EncounterNumber(encounter, PortraitEncounter)]));
+        return mapStatus != 0 || portraitStatus != 0 ? null :
+            GetPdfs(mapOutput, isPortrait: false).Concat(GetPdfs(portraitOutput, isPortrait: true)).ToArray();
+    }
+
+    private static PdfOutput[]? RenderAdventure(AdventureFile adventure, string mapOutput, string portraitOutput,
+        AdventureTemplate template, string root)
+    {
+        string OverviewTitle(string id) => $"{adventure.Title} - {id} - {adventure.Encounters[id].Name}";
+
+        var mapStatus = adventure.Maps.Count == 0 ? 0 :
+            RenderCommands.BuildAdventureMaps(adventure.Maps.Select(map =>
+                    (map.Image, map.PdfName, map.WidthFeet, OverviewTitle(map.EncounterId))),
+                mapOutput, template.MapTemplate, root);
+        var portraitStatus = adventure.Portraits.Count == 0 ? 0 :
+            PortraitCommands.BuildAdventurePortraits(adventure.Portraits, portraitOutput, template.PortraitsTemplate, root,
+                OverviewTitle);
+        if (mapStatus != 0 || portraitStatus != 0)
+            return null;
+
+        var maps = adventure.Maps.Select(map =>
+            new PdfOutput(Path.Combine(mapOutput, map.PdfName), false, adventure.Encounters[map.EncounterId].Number));
+        var portraits = adventure.Portraits.Select(portrait => portrait.EncounterId).Distinct().Select(id =>
+            new PdfOutput(Path.Combine(portraitOutput, $"encounter_{id.ToLowerInvariant()}.pdf"),
+                true, adventure.Encounters[id].Number));
+        return maps.Concat(portraits).ToArray();
+    }
+
+    private static string? LineupTitle(string title, IEnumerable<string> mapNames)
+    {
+        var names = mapNames.Distinct(StringComparer.OrdinalIgnoreCase).Take(2).ToArray();
+        return names.Length == 1 ? $"{title} - {names[0]}" : null;
     }
 
     private static string[] Inputs(string directory, Func<string, bool> isImage) =>

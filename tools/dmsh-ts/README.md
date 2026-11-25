@@ -163,6 +163,10 @@ that image. This filename value takes precedence over `--width` and the
 template's `worldWidthFeet`. For example, `E1 Farmhouse 100x60.jpg` uses a
 100-foot world width.
 
+Map overviews use the image filename stem as their heading. In adventure-file
+mode, `process_adventure` supplies the adventure title, encounter ID, and
+encounter name as the heading.
+
 ## Image preprocessing
 
 DMSH accepts JPEG, PNG, BMP, and static WebP images. It rejects images over

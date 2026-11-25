@@ -93,21 +93,19 @@ public static class PortraitPdfExporter
                     var cardY = cellY;
 
                     using var portraitBitmap = ReadImage(portrait.Path, cropTransparentPadding: true);
-                    var lineupHeightFeet = portrait.HeightInches is { } explicitHeightInches
-                        ? explicitHeightInches / 12
-                        : template.GetDefaultHeightFeet(portrait.Size);
-                    var badgeScale = portrait.Size.ToLowerInvariant() switch
+                    var heightInches = portrait.HeightInches ?? template.GetDefaultHeightFeet(portrait.Size) * 12;
+                    if (portrait.IncludeInLineup)
                     {
-                        "large" => 1,
-                        "huge" => 1,
-                        "gargantuan" => 1,
-                        _ => 1
-                    };
-                    lineup.Add((portrait.Path, portrait.Name, portrait.TokenId,
-                        lineupHeightFeet * portraitBitmap.Width / portraitBitmap.Height, lineupHeightFeet, badgeScale));
-                    var portraitScale = portrait.HeightInches is { } heightInches
+                        var lineupHeightFeet = heightInches / 12;
+                        lineup.Add((portrait.Path, portrait.Name, portrait.LineupTokenId ?? portrait.TokenId,
+                            lineupHeightFeet * portraitBitmap.Width / portraitBitmap.Height, lineupHeightFeet, 1));
+                    }
+                    var referenceHeight = GetReferenceHeight(template, portrait.Size);
+                    if (referenceHeight is null && portrait.HeightInches.HasValue)
+                        throw new InvalidDataException($"Template has no reference height configured for size '{portrait.Size}'.");
+                    var portraitScale = referenceHeight is { } referenceInches
                         ? template.Scale.MinHeight + (1 - template.Scale.MinHeight)
-                            * (heightInches / GetReferenceHeight(template, portrait.Size))
+                            * (heightInches / referenceInches)
                         : 1d;
                     var portraitRegion = template.Regions.Portrait;
                     var imageBounds = GetFittedImageBounds(portraitBitmap, cardX, cardY, portraitRegion, scale, portraitScale);
@@ -152,7 +150,8 @@ public static class PortraitPdfExporter
 
         DrawLineup(lineupPage, background, badge, lineup, pageWidth, pageHeight, margin,
             template.LineupFrame, templateDirectory, lineupTitle ?? $"Encounter {portraits[0].EncounterId}",
-            labelColor, imageDpi, opaqueBackground);
+            template.Font, labelColor, imageDpi,
+            opaqueBackground);
         document.Options.CompressContentStreams = true;
         document.Save(destination, false);
     }
@@ -160,8 +159,8 @@ public static class PortraitPdfExporter
     private static void DrawLineup(PdfPage page, SKBitmap background, SKBitmap? badge,
         IReadOnlyList<(string Path, string Name, string TokenId, double WidthFeet, double HeightFeet, int BadgeScale)> lineup,
         double pageWidth, double pageHeight, double pageMargin,
-        LineupFrameTemplate? frame, string templateDirectory, string lineupTitle, XColor titleColor, int imageDpi,
-        bool opaqueBackground)
+        LineupFrameTemplate? frame, string templateDirectory, string lineupTitle, string font,
+        XColor titleColor, int imageDpi, bool opaqueBackground)
     {
         const double rightMarginFeet = 1;
         const double axisLabelGapFeet = 0.2;
@@ -180,6 +179,11 @@ public static class PortraitPdfExporter
         using var bottomLeftTile = ReadFrameTile(frame?.BottomLeft);
         using var bottomTile = ReadFrameTile(frame?.Bottom);
 
+        page.Width = XUnit.FromPoint(pageWidth);
+        page.Height = XUnit.FromPoint(pageHeight);
+        using var graphics = XGraphics.FromPdfPage(page);
+        var labels = new PdfTextCanvas(page, font);
+
         var tallestBadgeFeet = baseBadgeSizeFeet * lineup.Max(creature => creature.BadgeScale);
         var axisWidthFeet = lineup.Sum(creature => creature.WidthFeet)
             + gapFeet * (lineup.Count - 1);
@@ -191,7 +195,7 @@ public static class PortraitPdfExporter
         {
             var label = FormattableString.Invariant($"{foot} ft");
             widestLabelWidth = Math.Max(widestLabelWidth,
-                PdfTextCanvas.Measure(label, labelSize, bold: false));
+                labels.MeasureForFont(graphics, label, labelSize, bold: false));
         }
         var labelPaddingFeet = axisLabelGapFeet + axisLabelOuterPaddingFeet;
         var printableWidth = pageWidth - 2 * pageMargin;
@@ -209,7 +213,8 @@ public static class PortraitPdfExporter
         var nameFontFeet = Math.Min(0.8, 20 / preliminaryScale);
         var nameLineFeet = nameFontFeet * nameLineSpacing;
         var wrappedNames = lineup.Select(creature =>
-            WrapLineupName(creature.Name, creature.WidthFeet * CreatureNameRatio, nameFontFeet)).ToArray();
+            WrapLineupName(graphics, labels, creature.Name,
+                creature.WidthFeet * CreatureNameRatio * preliminaryScale, nameFontFeet * preliminaryScale)).ToArray();
         var namesHeightFeet = wrappedNames.Max(lines => lines.Count) * nameLineFeet;
         var halfLineFeet = nameLineFeet / 2;
         var badgeAreaTopFeet = nameTopFeet + namesHeightFeet + halfLineFeet;
@@ -259,12 +264,9 @@ public static class PortraitPdfExporter
         var left = (pageWidth - width) / 2;
         var topOverhang = topOverhangPixels * frameScale;
         var sideExtension = sideOverhangPixels * frameScale;
-        var top = (pageHeight - height - bottomExtension + topOverhang) / 2;
+        var top = pageMargin + topOverhang;
         var baseline = top + height - bottomMarginFeet * pointsPerFoot;
 
-        page.Width = XUnit.FromPoint(pageWidth);
-        page.Height = XUnit.FromPoint(pageHeight);
-        using var graphics = XGraphics.FromPdfPage(page);
         var canvasHeight = height + bottomExtension;
         var sideBackgroundBleed = (frame?.SideBackgroundBleedPixels ?? 0) * frameScale;
         var backgroundBounds = new XRect(left - sideBackgroundBleed, top,
@@ -283,14 +285,13 @@ public static class PortraitPdfExporter
         var right = x + axisWidthFeet * pointsPerFoot;
         DrawLineupScale(graphics, x, right, baseline, tallestFeet, pointsPerFoot);
         var creatureBaseline = baseline + pointsPerFoot * CreatureDownShiftFeet;
-        var labels = new PdfTextCanvas(page, "Helvetica");
         var nameTop = baseline + nameTopFeet * pointsPerFoot;
         var badgeCenterY = baseline + (badgeAreaTopFeet + tallestBadgeFeet / 2) * pointsPerFoot;
         var heightLabelRight = x - pointsPerFoot * axisLabelGapFeet;
         for (long foot = labelIntervalFeet; foot <= tallestFeet; foot += labelIntervalFeet)
         {
             var label = FormattableString.Invariant($"{foot} ft");
-            var labelWidth = PdfTextCanvas.Measure(label, labelSize, bold: false);
+            var labelWidth = labels.MeasureForFont(graphics, label, labelSize, bold: false);
             var heightLabelY = baseline - foot * pointsPerFoot + labelSize * 0.35;
             labels.Draw(graphics, label, labelSize, bold: false, XColors.Black,
                 heightLabelRight - labelWidth, heightLabelY);
@@ -312,11 +313,12 @@ public static class PortraitPdfExporter
             if (lineupBadge is not null)
                 graphics.DrawImage(lineupBadge, centerX - badgeSize / 2, badgeTop, badgeSize, badgeSize);
             var tokenId = PdfTextCanvas.Normalize(creature.TokenId.ToUpperInvariant());
-            var tokenSize = badgeSize * 0.5;
-            var tokenWidth = PdfTextCanvas.Measure(tokenId, tokenSize, bold: true);
+            var tokenSize = badgeSize * 0.5 * 1.33;
+            var tokenWidth = labels.MeasureForFont(graphics, tokenId, tokenSize, bold: true);
             var widthScale = tokenWidth > badgeSize * 0.7 ? badgeSize * 0.7 / tokenWidth : 1;
+            var tokenBaseline = badgeCenterY + labels.BoldCapHeight(tokenSize) / 2;
             labels.Draw(graphics, tokenId, tokenSize, bold: true, badge is null ? XColors.Black : XColors.White,
-                centerX - tokenWidth * widthScale / 2, badgeTop + (badgeSize + tokenSize * 0.52) / 2,
+                centerX - tokenWidth * widthScale / 2, tokenBaseline,
                 widthScale: widthScale);
             x += creatureWidth + gapFeet * pointsPerFoot;
         }
@@ -339,8 +341,8 @@ public static class PortraitPdfExporter
                 var region = new PixelRegion(titleSidePaddingPixels, titleBand.Top,
                     titleWidthPixels - 2 * titleSidePaddingPixels, titleBand.Height);
                 var placement = TextFieldLayout.Fit(title, region, left, rowTop, frameScale, bold: true);
-                labels.Draw(graphics, title, placement.FontSize, bold: true, titleColor,
-                    placement.X, placement.Baseline, widthScale: placement.HorizontalScale);
+                labels.DrawSmallCaps(graphics, title, placement.FontSize, bold: true, titleColor,
+                    left + titleSidePaddingPixels * frameScale, placement.Baseline, region.Width * frameScale);
             }
         }
         graphics.Dispose();
@@ -402,14 +404,15 @@ public static class PortraitPdfExporter
         }
     }
 
-    private static List<string> WrapLineupName(string name, double maxWidth, double fontSize)
+    private static List<string> WrapLineupName(XGraphics graphics, PdfTextCanvas labels,
+        string name, double maxWidth, double fontSize)
     {
         var lines = new List<string>();
         var line = string.Empty;
         foreach (var word in PdfTextCanvas.Normalize(name).Split(' ', StringSplitOptions.RemoveEmptyEntries))
         {
             var candidate = line.Length == 0 ? word : $"{line} {word}";
-            if (line.Length > 0 && PdfTextCanvas.Measure(candidate, fontSize, bold: false) > maxWidth)
+            if (line.Length > 0 && labels.MeasureForFont(graphics, candidate, fontSize, bold: false) > maxWidth)
             {
                 lines.Add(line);
                 line = word;
@@ -431,7 +434,7 @@ public static class PortraitPdfExporter
         var baseline = top + fontSize;
         foreach (var wrappedLine in lines)
         {
-            var width = PdfTextCanvas.Measure(wrappedLine, fontSize, bold: false);
+            var width = labels.MeasureForFont(graphics, wrappedLine, fontSize, bold: false);
             var widthScale = width > maxWidth ? maxWidth / width : 1;
             labels.Draw(graphics, wrappedLine, fontSize, bold: false, XColors.Black,
                 centerX - width * widthScale / 2, baseline, widthScale: widthScale);
@@ -458,12 +461,12 @@ public static class PortraitPdfExporter
         }
     }
 
-    private static double GetReferenceHeight(PortraitTemplate template, string size)
+    private static double? GetReferenceHeight(PortraitTemplate template, string size)
     {
         foreach (var pair in template.Scale.Heights)
             if (string.Equals(pair.Key, size, StringComparison.OrdinalIgnoreCase))
                 return pair.Value;
-        throw new InvalidDataException($"Template has no reference height configured for size '{size}'.");
+        return null;
     }
 
     private static XRect GetFittedImageBounds(SKBitmap image, double cardX, double cardY,

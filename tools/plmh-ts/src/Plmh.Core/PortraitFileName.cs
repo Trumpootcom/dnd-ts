@@ -13,6 +13,9 @@ public sealed record PortraitFileName(
     string Type,
     double? HeightInches = null)
 {
+    public bool IncludeInLineup { get; init; } = true;
+    public string? LineupTokenId { get; init; }
+
     /// <summary>Parses a portrait path using underscore-delimited metadata fields.</summary>
     public static PortraitFileName Parse(string path)
     {
@@ -57,6 +60,12 @@ public sealed record PortraitFileName(
             heightInches);
     }
 
+    public static PortraitFileName FromMetadata(string path, string encounterId, string tokenId,
+        string name, string size, string type, string? height) =>
+        new(path, encounterId, PortraitTextFormatter.FormatTokenId(tokenId),
+            PortraitTextFormatter.FormatName(name), TitleCase(size), TitleCase(type),
+            height is null ? null : ParseHeightValue(height, System.IO.Path.GetFileName(path)));
+
     private static double? ParseHeight(ref string size, string fileName)
     {
         var open = size.LastIndexOf('(');
@@ -64,7 +73,15 @@ public sealed record PortraitFileName(
         if (size[^1] != ')')
             throw InvalidFormat(fileName, "height must use the feet-inches format, such as medium(5-0)");
 
-        var height = size[(open + 1)..^1];
+        var heightInches = ParseHeightValue(size[(open + 1)..^1], fileName);
+        size = size[..open].Trim();
+        if (size.Length == 0)
+            throw InvalidFormat(fileName, "size must not be empty");
+        return heightInches;
+    }
+
+    private static double ParseHeightValue(string height, string fileName)
+    {
         var parts = height.Split('-');
         int feet;
         int inches;
@@ -87,9 +104,6 @@ public sealed record PortraitFileName(
         if (feet < 0 || inches is < 0 or > 11 || (feet == 0 && inches == 0))
             throw InvalidFormat(fileName, "height must use feet-inches format with 0 to 11 inches, such as medium(5-0)");
 
-        size = size[..open].Trim();
-        if (size.Length == 0)
-            throw InvalidFormat(fileName, "size must not be empty");
         return feet * 12d + inches;
     }
 

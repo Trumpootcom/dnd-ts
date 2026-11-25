@@ -1,28 +1,131 @@
 # D&D Tools Adventure Batch
 
-Run from the workspace containing `in_maps/` and `in_portraits/`.
+Run from the workspace root. Pass a title to look for
+`adventures/<title>.adventure.json`, or pass a relative or absolute path to an
+`.adventure.json` file. A title with no matching file uses the staged inputs in
+`in_maps/` and `in_portraits/`. An invalid adventure file or missing explicit
+path stops the build with an error.
 
 ```bat
-bin\process_adventure.bat "The Old Farmhouse"
-bin\process_adventure.bat "The Old Farmhouse" --date 261205 --template merged.json
+bin\process_adventure.bat "Jebs Cabin"
+bin\process_adventure.bat "adventures\Jebs Cabin.adventure.json" --date 261205 --template merged.json
 bin\process_adventure.bat --help
 bin\process_adventure.bat --version
 bin\process_adventure.bat --templates
 ```
 
 ```sh
-sh bin/process_adventure.sh "The Old Farmhouse"
-sh bin/process_adventure.sh "The Old Farmhouse" --date 261205 --template merged.json
+sh bin/process_adventure.sh "Jebs Cabin"
+sh bin/process_adventure.sh "adventures/Jebs Cabin.adventure.json" --date 261205 --template merged.json
 sh bin/process_adventure.sh --help
 sh bin/process_adventure.sh --version
 sh bin/process_adventure.sh --templates
 ```
 
-The adventure title is required. `--date` accepts a calendar date in `YYMMDD`
-and defaults to the local date. The date prefixes the output folder, archive
+The title comes from the adventure file in file mode and from the command
+line in staged mode. `--date` accepts a calendar date in `YYMMDD` and takes
+precedence over the adventure file's optional date. With neither set, the
+command uses the local date. The date prefixes the output folder, archive
 folder, and merged PDF filename. It also appears in the run summary and
 merged PDF metadata.
 `--version` shows the suite version and the component versions in use.
+
+## Adventure files
+
+See [Jebs Cabin](../../adventures/Jebs%20Cabin.adventure.json) for a complete
+example with reusable creatures. The Old Farmhouse example uses placeholder
+image paths that need to be filled in before building.
+
+- Use a `title` and an `encounters` array. Each encounter has a unique numbered
+  `id` such as `ENC1`, an optional `name` for PDF filenames, and `maps` and
+  `portraits` lists as needed. The name defaults to the adventure title.
+- In the `maps` array, reference a library location with
+  `"location": "../library/locations/Jebs Cabin.json"`.
+  The map JSON supplies `file` and a required positive `widthFeet`. Its image
+  path is relative to the map JSON. Existing inline map entries with a
+  `file` still work. Their optional `widthFeet` defaults to the selected map
+  template's `worldWidthFeet`, which is 160 feet in T000.
+- A portrait has a `tokenId` unique within its encounter. Specify a `file`,
+  `size`, and `type`, or use `creature` to reference a creature JSON file
+  with defaults for `name`, `size`, `type`, and `portrait`. Encounter entries
+  can override those defaults via `name`, `size`, `type`, and `file`.
+  Without a name, the filename stem supplies it. Both the creature file and
+  the encounter portrait entry accept an optional `height` string in feet or
+  feet-inches, such as `"5"` or `"5-2"`. The encounter height overrides the
+  creature height. When both are omitted, the portrait template supplies a
+  default height by creature size for lineups and cards.
+- Add a positive integer `qty` to reuse the portrait and its metadata for
+  several tokens. With `"tokenId": "B", "qty": 2`, the tokens are `B1` and
+  `B2`. Numbering starts at 1 even when `qty` is 1. Omitting `qty` uses the
+  supplied token ID as-is. Expanded IDs must be unique within the encounter.
+  The composite lineup shows each group once with the original `tokenId`
+  as its label. Every numbered token gets a portrait card.
+- Location references, inline image paths, and creature paths are relative to the adventure file. A creature
+  file's default portrait path is relative to the creature file itself.
+  The same image can be referenced by multiple encounters or portrait tokens.
+
+Map overviews and portrait lineup title bands use
+`<adventure title> - <encounter ID> - <encounter name>`.
+Portrait lineup titles are rendered in small caps.
+
+Validation reports missing resources and invalid encounter metadata before
+rendering. Successful builds publish to the workspace's `out/` folder.
+Adventure-file builds run without an archive prompt and keep library assets
+in place.
+
+## Add a new location
+
+1. Put the map image in `library/maps/`, for example `Old Mill.png`.
+2. Create `library/locations/Old Mill.json`. Set `file` relative to the
+   location JSON and set `widthFeet` to the map's full width in feet. Use a
+   positive number.
+
+   ```json
+   {
+     "file": "../maps/Old Mill.png",
+     "widthFeet": 120
+   }
+   ```
+
+3. Add a location reference to the encounter's `maps` array. For an adventure
+   file in `adventures/`, use this entry.
+
+   ```json
+   { "location": "../library/locations/Old Mill.json" }
+   ```
+
+## Add a new creature
+
+1. Put the image in `library/portraits/`, for example `Mill Guard.png`.
+2. Create `library/creatures/mill-guard.json`. Set the display `name`, creature
+   `size` and `type`, and the `portrait` path relative to the creature JSON.
+   Optionally set `height` as a string in feet or feet-inches. For example,
+   `"5-10"` means 5 feet 10 inches.
+
+   ```json
+   {
+     "name": "Mill Guard",
+     "size": "medium",
+     "type": "humanoid",
+     "portrait": "../portraits/Mill Guard.png",
+     "height": "5-10"
+   }
+   ```
+
+3. Add a creature reference to the encounter's `portraits` array. Use a
+   unique `tokenId` within the encounter. Add `qty` for multiple copies.
+
+   ```json
+   {
+     "creature": "../library/creatures/mill-guard.json",
+     "tokenId": "B",
+     "qty": 2
+   }
+   ```
+
+   This gives you one lineup portrait labeled `B` and two cards labeled
+   `B1` and `B2`. Set `height` on the encounter entry to override the
+   creature's height for that entry.
 
 ## Templates
 
@@ -40,23 +143,30 @@ second command above.
 }
 ```
 
-- `name` labels the preset. The adventure title comes from the command line.
+- `name` labels the preset.
 - `map_template` and `portraits_template` select a bundled name or file path
   for [DMSH](../dmsh-ts/README.md) and [PLMH](../plmh-ts/README.md). Relative
   paths are resolved from the workspace.
-- `individualPDF` is `true` in T000. It keeps one PDF per map image and one
-  lineup and portrait-card PDF per encounter. Set it to `false` to publish
-  a single PDF named after the adventure folder.
+- `individualPDF` is `true` in T000. In adventure-file mode it publishes one
+  `ENC1 - <encounter name> - Maps.pdf` and one
+  `ENC1 - <encounter name> - Portraits.pdf` per
+  encounter with the corresponding assets. Multiple maps share the Maps PDF
+  in filename order. Staged mode keeps one PDF per map image and one lineup
+  and portrait-card PDF per encounter. Set `individualPDF` to `false` to
+  publish one `ENC1 - <encounter name> - Adventure.pdf` per encounter in
+  adventure-file mode, or one PDF named after the adventure folder in staged
+  mode.
 - `mergeOrder` defaults to `encounter`. It places each encounter's maps before
   its portraits. Use `type` for all maps followed by all portraits. Both
-  modes sort encounter numbers numerically (E1, E2, E10). Put the encounter
+  modes sort encounter numbers numerically (ENC1, ENC2, ENC10). For staged
+  builds, put the encounter
   ID in the map filename as a separate part delimited by spaces, underscores,
   or hyphens, as in `ASHEN-E1-MAP02D_DM 140x110.png`. Multiple
   maps for an encounter are sorted by filename. Maps without numbered IDs
   follow numbered maps in `type` mode and go at the end in `encounter` mode.
   Page sizes and orientations are preserved.
 
-## Build, review, and archive
+## Build, review, and archive staged inputs
 
 For portrait templates with a lineup title band, the adventure batch uses
 `<adventure title> - <map name>`. It derives the map name from the filename

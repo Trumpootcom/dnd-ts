@@ -1,5 +1,21 @@
 # plmh-ts change log - Portrait Layout Manager (Headless) Tool Suite
 
+## 1.4.2
+
+- Render composite portrait titles in small caps.
+
+## 1.4.1
+
+- Show the adventure quantity group's token prefix on its lineup badge.
+
+## 1.4.0
+
+- Support one lineup portrait per adventure quantity group while printing every numbered card.
+
+## 1.3.1
+
+- Scale portrait cards using the creature size's default height when no height is supplied.
+
 ## 1.3.0
 
 - Support custom portrait lineup headings supplied by the adventure batch.

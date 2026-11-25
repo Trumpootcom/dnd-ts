@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "template": "Letter Landscape",
+  "title": "Portrait Nameplates",
+  "font": "Cinzel ExtraBold",
+  "size": {
+    "width": 1000,
+    "height": 1400
+  },
+  "background": {
+    "image": "bg_parchment.png"
+  },
+  "frame": {
+    "image": "frame_default.png"
+  },
+  "scale": {
+    "min_ht": 0.4,
+    "tiny": 96,
+    "small": 96,
+    "medium": 96,
+    "large": 192,
+    "huge": 384,
+    "gargantuan": 600
+  },
+  "token_badge": "token.png",
+  "defaultHeightFeet": {
+    "tiny": 1,
+    "small": 3,
+    "medium": 6,
+    "large": 12,
+    "huge": 24,
+    "gargantuan": 48
+  },
+  "regions": {
+    "token_id": { "L": 769, "T": 72, "W": 164, "H": 180 },
+    "portrait": { "L": 30, "T": 80, "W": 940, "H": 1050 },
+    "name": { "L": 118, "T": 1178, "W": 767, "H": 94 },
+    "size_type": { "L": 118, "T": 1280, "W": 767, "H": 48 }
+  },
+  "page": {
+    "size": "letter",
+    "orientation": "landscape",
+    "marginInches": 0.25,
+    "columnGapInches": 0.1,
+    "rowGapInches": 0.25,
+    "columns": 3,
+    "rows": 1,
+    "placement": "topLeft"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "title": "Jebs Cabin",
+  "encounters": [
+    {
+      "id": "ENC1",
+      "name": "Cabin in the Woods",
+      "maps": [
+        {
+          "location": "../library/locations/Jebs Cabin.json"
+        }
+      ],
+      "portraits": [
+        {
+          "creature": "../library/creatures/hobgoblin-devastator-2016.json",
+          "tokenId": "A1"
+        },
+        {
+          "creature": "../library/creatures/hobgoblin-2014.json",
+          "tokenId": "B",
+          "qty": 2
+        },
+        {
+          "creature": "../library/creatures/bugbear-2014.json",
+          "tokenId": "C1"
+        },
+        {
+          "creature": "../library/creatures/goblin-2014.json",
+          "tokenId": "E",
+          "qty": 5
+        }
+      ]
+    }
+  ]
+}

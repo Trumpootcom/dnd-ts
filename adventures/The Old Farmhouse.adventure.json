@@ -1,0 +1,24 @@
+{
+  "title": "The Old Farmhouse",
+  "date": "261205",
+  "encounters": [
+    {
+      "id": "ENC1",
+      "maps": [
+        {
+          "file": "../library/maps/Farmhouse.jpg",
+          "widthFeet": 100
+        }
+      ],
+      "portraits": [
+        {
+          "file": "../library/portraits/mistorn giant.jpg",
+          "tokenId": "f2",
+          "size": "medium",
+          "type": "dragon",
+          "height": "5-0"
+        }
+      ]
+    }
+  ]
+}

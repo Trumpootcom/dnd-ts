@@ -10,7 +10,7 @@ internal static class OverviewPanel
     private static readonly XColor Paper = XColor.FromArgb(246, 237, 217);
 
     public static void Draw(XGraphics graphics, PdfLabelText text, MapTemplate template, SheetPlan plan,
-        double pageHeight, double panelWidth, double scale, string imageName)
+        double pageHeight, double panelWidth, double scale, string imageName, bool fitFullTitle)
     {
         var margin = plan.Margin;
         var height = pageHeight - 2 * margin;
@@ -29,8 +29,11 @@ internal static class OverviewPanel
         var titleSize = 17 * scale;
         var limit = height - 16 * scale;
         var heading = title;
-        for (var length = title.Length; length > 0 && PdfLabelText.Measure(heading, titleSize, bold: true) > limit;)
-            heading = title[..--length] + "...";
+        if (!fitFullTitle)
+        {
+            for (var length = title.Length; length > 0 && PdfLabelText.Measure(heading, titleSize, bold: true) > limit;)
+                heading = title[..--length] + "...";
+        }
         titleSize *= Math.Min(1, limit / Math.Max(1, PdfLabelText.Measure(heading, titleSize, bold: true)));
         if (titleSize > 0)
             Centered(heading, true, titleSize, margin + (titleColumn + PdfLabelText.Height(titleSize, bold: true)) / 2, bottom, height);

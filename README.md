@@ -6,23 +6,35 @@ and workflow folders live at the repository root.
 
 ## Process an adventure
 
-Stage maps in `in_maps/` and portraits in `in_portraits/`, then run the
-adventure batch from the workspace root.
+Run the adventure batch from the workspace root. A title looks for
+`adventures/<title>.adventure.json`. You can also pass that file's path directly.
 
 ```bat
-bin\process_adventure.bat "The Old Farmhouse"
+bin\process_adventure.bat "Jebs Cabin"
 ```
 
 ```sh
-sh bin/process_adventure.sh "The Old Farmhouse"
+sh bin/process_adventure.sh "Jebs Cabin"
 ```
 
-The date prefix defaults to today's local date in `YYMMDD` format. Review the
-PDFs in `out/<YYMMDD> - The Old Farmhouse/` before deciding whether to archive
-the original images. The default template keeps the PDFs separate. A
-matching map supplies the map name for the portrait lineup heading.
-See the [adventure workflow guide](tools/adventure-ts/README.md) for merged
-PDFs, template settings, and archive behavior.
+The cabin adventure uses reusable maps and portraits from `library/`. Builds
+write PDFs to `out/<YYMMDD> - <title>/` and leave the library files in place.
+An adventure portrait entry can use `qty` to create numbered tokens from one
+creature reference. The lineup shows each group once with its token prefix,
+and every numbered token gets a portrait card.
+Creature files can supply a default height, and encounter portrait entries
+can override it.
+Use `location` in an encounter map entry to reference a JSON file in
+`library/locations/` that stores the image path and width in feet.
+If a title has no matching adventure file, the command reads staged images
+from `in_maps/` and `in_portraits/` and offers to archive them after a successful
+build. The default template publishes separate adventure-file PDFs such as
+`ENC1 - Jebs Cabin - Maps.pdf` and `ENC1 - Jebs Cabin - Portraits.pdf`. These
+use the encounter's name. Map and portrait overviews use
+`<adventure title> - <encounter ID> - <encounter name>`. Merged output uses `- Adventure.pdf` for each
+encounter. See the
+[adventure workflow guide](tools/adventure-ts/README.md) for file fields,
+date defaults, templates, and merged PDFs.
 
 <!-- Suite reference starts here. See AGENTS.md for editing rules. -->
 
@@ -30,10 +42,16 @@ PDFs, template settings, and archive behavior.
 
 ```text
 dnd-ts/
+├── adventures/      Adventure files and examples
 ├── bak/             Shared archive for successfully processed inputs
 ├── bin/             Shared command launchers
 ├── in_maps/         Map images waiting for batch processing
 ├── in_portraits/    Portrait images waiting for batch processing
+├── library/         Reusable adventure assets
+│   ├── creatures/   Reusable creature metadata
+│   ├── locations/   Map metadata, including width
+│   ├── maps/        Map images
+│   └── portraits/   Portrait images
 ├── out/             Shared output folder for generated files
 ├── samples/         Sample files for each tool
 │   └── maps/        DMSH sample maps; copy to in_maps/ to process
@@ -55,21 +73,24 @@ Run these examples from the repository root.
 - **Adventure** ([Help and full README](tools/adventure-ts/README.md))
   - **Tool folder** `tools/adventure-ts/`
   - **Name** D&D Tools Adventure Batch
-  - **Windows command** `bin\process_adventure.bat "<title>"`
-  - **macOS command** `sh bin/process_adventure.sh "<title>"`
-  - **Description** Builds the staged map and portrait images as one adventure.
+  - **Windows command** `bin\process_adventure.bat "<title-or-adventure-file>"`
+  - **macOS command** `sh bin/process_adventure.sh "<title-or-adventure-file>"`
+  - **Description** Builds encounter maps and portraits from an adventure file,
+    or builds staged images when no file matches the title.
     Use DMSH or PLMH for a single image. The default adventure template is
     `T000.json` in `tools/adventure-ts/src/Adventure.Cli/Templates/`.
 
   ```bat
-  bin\process_adventure.bat "The Old Farmhouse" --date 261205 --template T000
+  bin\process_adventure.bat "Jebs Cabin" --date 261205 --template T000
+  bin\process_adventure.bat "adventures\Jebs Cabin.adventure.json"
   bin\process_adventure.bat --help
   bin\process_adventure.bat --version
   bin\process_adventure.bat --templates
   ```
 
   ```sh
-  sh bin/process_adventure.sh "The Old Farmhouse" --date 261205 --template T000
+  sh bin/process_adventure.sh "Jebs Cabin" --date 261205 --template T000
+  sh bin/process_adventure.sh "adventures/Jebs Cabin.adventure.json"
   sh bin/process_adventure.sh --help
   sh bin/process_adventure.sh --version
   sh bin/process_adventure.sh --templates
@@ -114,7 +135,7 @@ Run these examples from the repository root.
   - **Windows command** `bin\process_portraits.bat [command or image]`
   - **macOS command** `sh bin/process_portraits.sh [command or image]`
   - **Description**
-    - Pass a portrait image to create a printable PDF beside it. Filenames use the format `encounter_token_name_size_type` with an optional height in the size field, such as `medium(5-2)`.
+    - Pass a portrait image to create a printable PDF beside it. Filenames use the format `encounter_token_name_size_type` with an optional height in the size field, such as `medium(5-2)`. Omitted heights default by creature size for lineups and portrait cards.
     - Run with no arguments or with `batch` to group images from `in_portraits/` and write one PDF per encounter to `out/`. PDFs include a lineup and portrait cards. Source images stay in place.
     - Bundled templates are in `tools/plmh-ts/src/Plmh.Cli/Templates/`. The default is `T000.jsonc`. Use `--template` with a template name or file path, or `--templates` to list bundled templates.
     - Use `--dpi` to change the default image resolution of 100 DPI.

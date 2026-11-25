@@ -1,0 +1,7 @@
+{
+  "name": "Bugbear",
+  "size": "medium",
+  "type": "humanoid",
+  "portrait": "../portraits/bugbear-2014.png",
+  "height": "8-9"
+}

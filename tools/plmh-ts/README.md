@@ -108,11 +108,15 @@ PDF per encounter, such as `out/encounter_e1.pdf`; additional cards continue on
 new pages in that encounter PDF.
 
 The first page of each PDF shows the encounter lineup in portrait order. If
-the template has a title band, PLMH shows the encounter ID by default.
-`process_adventure` can supply the adventure and map name for that band. The
-cutouts share a baseline and a common scale based on the heights in their
+the template has a title band, PLMH shows the encounter ID in small caps by default.
+`process_adventure` supplies the adventure title, encounter ID, and encounter
+name in adventure-file mode. Staged mode can supply the adventure and map
+name. The
+lineup shows each adventure `qty` group once with its token prefix as the
+label. Each numbered token gets a card. The cutouts share a baseline and a
+common scale based on the heights in their
 filenames. For a portrait without a height suffix, `defaultHeightFeet` supplies
-the lineup height by creature size. The built-in defaults are 1, 3, 6, 12, 24,
+the height by creature size for lineups and portrait cards. The built-in defaults are 1, 3, 6, 12, 24,
 and 48 feet for Tiny through Gargantuan, respectively. Unlisted custom sizes
 default to 6 feet. Width follows the cropped cutout's aspect ratio. The `scale`
 reference heights in inches apply to the portrait frames.
@@ -204,13 +208,13 @@ For display, token IDs are uppercased (`f1` becomes `F1`). Names and the
 combined size and creature type use title case (`mistborn dragon` becomes
 `Mistborn Dragon`; `medium dragon` becomes `Medium Dragon`).
 
-When height is provided, the exporter scales the cropped visible image by its
-height in inches divided by the template's reference height for that creature
-size. The default template uses 96 inches for Tiny, Small, and Medium; 192 for
-Large; 384 for Huge; and 600 for Gargantuan. The height is also shown in the
-size/type label. `scale.min_ht` sets the minimum relative scale; the default
-template uses `0.4`. Without a height suffix, the portrait fits the configured
-portrait region and the template scale map is not used.
+The exporter scales the cropped portrait using the supplied or default height
+in inches divided by the template's reference height for that creature size.
+T000 uses reference heights of 96 inches for Tiny, Small, and Medium, 192 for
+Large, 384 for Huge, and 600 for Gargantuan. The ratio is applied to the
+remaining scale above `scale.min_ht`, which is `0.4` in T000. If a template
+lacks a reference height for a creature size, an omitted height gives a
+full-scale portrait and an explicit height requires a reference height.
 
 `Plmh.Core.PortraitFileName.Parse(path)` parses this convention and returns the
 full image path with encounter ID, token ID, name, size, and creature type.

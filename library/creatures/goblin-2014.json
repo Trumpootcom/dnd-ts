@@ -1,0 +1,7 @@
+{
+  "name": "Goblin",
+  "size": "small",
+  "type": "humanoid",
+  "portrait": "../portraits/goblin-2014.png",
+  "height": "4-6"
+}

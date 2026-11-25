@@ -129,6 +129,23 @@ internal sealed class PdfTextCanvas(PdfPage page, string fontFamily)
         return graphics.MeasureString(text, CreateEmbeddedFont(size, bold)).Width;
     }
 
+    public double BoldCapHeight(double size)
+    {
+        if (EmbeddedFontResolver.IsEmbedded(fontFamily))
+        {
+            var metrics = CreateEmbeddedFont(size, bold: true).Metrics;
+            return size * metrics.CapHeight / metrics.UnitsPerEm;
+        }
+
+        // Standard PDF bold font cap heights, in 1/1000 em.
+        return size * (fontFamily switch
+        {
+            "Times" => 676,
+            "Courier" => 562,
+            _ => 718
+        }) / 1000;
+    }
+
     private XFont CreateEmbeddedFont(double size, bool bold)
     {
         var isLibreBaskerville = EmbeddedFontResolver.IsLibreBaskerville(fontFamily);

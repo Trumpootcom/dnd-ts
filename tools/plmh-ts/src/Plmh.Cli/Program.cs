@@ -30,6 +30,7 @@ if (args is ["--help"] or ["-h"] or ["help"])
           --templates           List bundled templates with paper settings and default image DPI.
 
         Batch groups portraits by encounter and writes one PDF per encounter to <workspace>/out.
+        When height is omitted, the creature size sets the default height for lineups and portrait cards.
         Source portraits are retained.
         """);
     return;

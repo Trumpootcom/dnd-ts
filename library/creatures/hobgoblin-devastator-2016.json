@@ -1,0 +1,7 @@
+{
+  "name": "Hobgoblin Devastator",
+  "size": "medium",
+  "type": "humanoid",
+  "portrait": "../portraits/hobgoblin-devastator-2016.webp",
+  "height": "6-2"
+}

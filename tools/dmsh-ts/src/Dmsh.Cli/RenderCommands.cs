@@ -27,6 +27,29 @@ public static class RenderCommands
         RenderBatch(images, output, ReadTemplate(templatePath, null,
             Path.Combine(AppContext.BaseDirectory, "Templates", "Dmsh")), root);
 
+    public static int BuildAdventureMaps(
+        IEnumerable<(string Image, string PdfName, double? WidthFeet)> maps,
+        string output, string templatePath, string root) =>
+        BuildAdventureMaps(maps.Select(map => (map.Image, map.PdfName, map.WidthFeet, (string?)null)),
+            output, templatePath, root);
+
+    public static int BuildAdventureMaps(
+        IEnumerable<(string Image, string PdfName, double? WidthFeet, string? OverviewTitle)> maps,
+        string output, string templatePath, string root)
+    {
+        var template = ReadTemplate(templatePath, null, Path.Combine(AppContext.BaseDirectory, "Templates", "Dmsh"));
+        Directory.CreateDirectory(output);
+        var exitCode = 0;
+        foreach (var (image, pdfName, widthFeet, overviewTitle) in maps)
+        {
+            var effective = widthFeet is { } feet ? template with { WorldWidthFeet = feet } : template;
+            if (!RenderImage(effective, image, Path.Combine(output, pdfName), root,
+                readFilenameWidth: false, overviewTitle: overviewTitle))
+                exitCode = 1;
+        }
+        return exitCode;
+    }
+
     private static int RenderBatch(IEnumerable<string> images, string output, MapTemplate template,
         string projectRoot)
     {
@@ -55,13 +78,12 @@ public static class RenderCommands
     }
 
     private static bool RenderImage(MapTemplate template, string image, string pdf,
-        string projectRoot)
+        string projectRoot, bool readFilenameWidth = true, string? overviewTitle = null)
     {
         var status = $"Processing image: {DisplayPath(projectRoot, image)}";
         try
         {
-            var dimensions = FilenameDimensions.Match(Path.GetFileNameWithoutExtension(image));
-            if (dimensions.Success)
+            if (readFilenameWidth && FilenameDimensions.Match(Path.GetFileNameWithoutExtension(image)) is { Success: true } dimensions)
             {
                 if (!double.TryParse(dimensions.Groups["width"].Value, NumberStyles.None,
                     CultureInfo.InvariantCulture, out var feet) || !double.IsFinite(feet) || feet <= 0)
@@ -69,7 +91,7 @@ public static class RenderCommands
                 template = template with { WorldWidthFeet = feet };
             }
 
-            Save(template, image, pdf);
+            Save(template, image, pdf, overviewTitle);
             status += $" -> {DisplayPath(projectRoot, pdf)}";
             Console.WriteLine(status);
             return true;
@@ -115,7 +137,7 @@ public static class RenderCommands
         return worldWidth is { } feet ? template with { WorldWidthFeet = feet } : template;
     }
 
-    private static void Save(MapTemplate template, string image, string pdf)
+    private static void Save(MapTemplate template, string image, string pdf, string? overviewTitle)
     {
         if (!IsImage(image))
             throw new ArgumentException("Supported images are JPEG, PNG, BMP and static WebP.");
@@ -127,7 +149,7 @@ public static class RenderCommands
         {
             try
             {
-                MapPdfExporter.Export(template, image, stream);
+                MapPdfExporter.Export(template, image, stream, overviewTitle);
                 stream.Flush(flushToDisk: true);
             }
             catch
