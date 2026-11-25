@@ -5,44 +5,47 @@ portrait image paths and derives the token ID, name, creature size, and type
 from each filename. It places the portrait and supplied metadata into a
 printable nameplate layout and exports a PDF.
 
-From the workspace root, run `bin\process_portraits.bat` to process image
-files in `in_portraits/`, or pass one portrait path to process that image. The
-launcher forwards arguments to the CLI and defaults to `batch` when no
-arguments are provided. PLMH prints its revision at startup and one status line
-per image, like DMSH. Batch PDFs go to `out/`; a single-file PDF is saved beside
-its source image. Source portraits remain in place.
+## PLMH
 
-Examples:
+- **Tool folder** `tools/plmh-ts/`
+- **Windows command** `bin\process_portraits.bat [command or image]`
+- With no arguments or with `batch`, process images from `in_portraits/` and
+  write one PDF per encounter to `out/`.
+- Pass a portrait image path to create one PDF beside that image.
+- Use `--dpi <value>` to set the target image resolution. The default is 100 DPI.
+- Use `--template <name-or-path>` to select a template. `T000.jsonc` is the default.
+
+Run commands from the umbrella workspace. Relative paths are resolved from
+the current directory. Batch mode reads JPEG, PNG, BMP, and WebP files from
+the top level of `in_portraits/`. PLMH prints its version at startup and a
+status line for each image it processes. Source portraits remain in place.
+
+### Command examples
+
+The first two commands are equivalent. Use the filename of a portrait in
+your workspace for the single-image commands. For the custom template example,
+substitute the path to your template file.
 
 ```bat
 bin\process_portraits.bat
 bin\process_portraits.bat batch
-bin\process_portraits.bat batch --dpi 150
-bin\process_portraits.bat "in_portraits\e1_a2_Hadran Pell_medium_chondathan male.png"
-bin\process_portraits.bat --template T000 "in_portraits\e1_a2_Hadran Pell_medium_chondathan male.png"
+bin\process_portraits.bat "in_portraits\e1_f1_mistborn dragon_medium_dragon.png"
+bin\process_portraits.bat --dpi 300 "in_portraits\e1_f1_mistborn dragon_medium_dragon.png"
+bin\process_portraits.bat batch --dpi 300
+bin\process_portraits.bat --template "path\to\custom.jsonc" "in_portraits\e1_f1_mistborn dragon_medium_dragon.png"
+
+bin\process_portraits.bat --help
+bin\process_portraits.bat --version
 ```
 
-PDF exports default to 150 DPI for raster images, based on their printed
-dimensions. Use `--dpi 300` for more image detail or `--dpi 0` to disable
-downsampling. The option works in batch and single-image mode. Images already
-below the target resolution are kept at their current resolution, and PDF text
-stays vector-based.
+`--help` lists commands and options. `--version` prints the version and UTC
+build time.
 
-Opaque backgrounds use high-quality JPEG with full chroma resolution.
-Portraits, frames, badges, and backgrounds with transparency use lossless
-compression. The exporter trims image pixels outside the visible clipping
-area while retaining a small border for interpolation.
-
-## Project layout
-
-- `src/Plmh.Cli/` — command-line application and bundled templates.
-- `src/Plmh.Core/` — reusable layout and rendering library for the CLI and
-  potential future app.
-- `src/Plmh.Cli/Templates/T000.jsonc` — embedded default template.
-
-## Template
+## Templates
 
 Templates use schema version 1 and accept both JSON and JSON with comments.
+Use a template name such as `T000` or pass a path to a custom `.json` or
+`.jsonc` file.
 `T000.jsonc` defines shared canvas dimensions
 under `size`, a font family, background and frame image paths, portrait and text placement
 rectangles, and paper size, orientation, margins, and placement. Both images
@@ -64,6 +67,8 @@ The bundled Cinzel
 ExtraBold font is an 800-weight instance of [Cinzel from Google Fonts](https://github.com/google/fonts/tree/main/ofl/cinzel),
 embedded in exported PDFs under the SIL Open Font License. Its license is in
 `src/Plmh.Core/Fonts/OFL-Cinzel.txt`.
+
+## Card layout and encounter lineup
 
 The exporter creates Letter, Legal, or Ledger PDFs with portrait cards placed
 in the configured row and column grid. The grid starts at the top-left page
@@ -111,6 +116,19 @@ The vertical axis is labeled every foot when the tallest creature is under
 10 feet and every five feet otherwise. Labels include the unit, as in `5 ft`.
 Each creature's name is centered below its portrait and wraps at spaces to fit
 within 75% of the portrait width. Long individual words are narrowed to fit.
+
+## Image preprocessing
+
+PDF exports default to 100 DPI for raster images, based on their printed
+dimensions. Use `--dpi 300` for more image detail or `--dpi 0` to disable
+downsampling. The option works in batch and single-image mode. Images already
+below the target resolution are kept at their current resolution, and PDF text
+stays vector-based.
+
+Opaque backgrounds use high-quality JPEG with full chroma resolution.
+Portraits, frames, badges, and backgrounds with transparency use lossless
+compression. The exporter trims image pixels outside the visible clipping
+area while retaining a small border for interpolation.
 
 Before placing a portrait on a card or in the lineup, PLMH scans outward from
 the image center for the first row or column on each side with no pixels at
@@ -175,6 +193,12 @@ full image path with encounter ID, token ID, name, size, and creature type.
 Parsing applies the display capitalization rules to token ID, name, size, and
 type without validating size or type against a fixed list. The filename
 extension is not restricted by the parser.
+
+## Project layout
+
+- `src/Plmh.Cli/` contains the command-line application and bundled templates.
+- `src/Plmh.Core/` contains the reusable layout and rendering library.
+- `src/Plmh.Cli/Templates/T000.jsonc` is the default template.
 
 ## Status
 
