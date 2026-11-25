@@ -4,6 +4,28 @@ This repository is an umbrella for tabletop role-playing tools. Each tool has
 its own project folder under `tools/`, while shared launchers, sample assets,
 and workflow folders live at the repository root.
 
+## Process an adventure
+
+Stage maps in `in_maps/` and portraits in `in_portraits/`, then run the
+adventure batch from the workspace root.
+
+```bat
+bin\process_adventure.bat "The Old Farmhouse"
+```
+
+```sh
+sh bin/process_adventure.sh "The Old Farmhouse"
+```
+
+The date prefix defaults to today's local date in `YYMMDD` format. Review the
+PDFs in `out/<YYMMDD> - The Old Farmhouse/` before deciding whether to archive
+the original images. The default template keeps the PDFs separate. A
+matching map supplies the map name for the portrait lineup heading.
+See the [adventure workflow guide](tools/adventure-ts/README.md) for merged
+PDFs, template settings, and archive behavior.
+
+<!-- Suite reference starts here. See AGENTS.md for editing rules. -->
+
 ## Folder structure
 
 ```text
@@ -16,7 +38,8 @@ dnd-ts/
 ├── samples/         Sample files for each tool
 │   └── maps/        DMSH sample maps; copy to in_maps/ to process
 └── tools/
-    └── dmsh-ts/     Desktop Map Slicer Headless Tool Suite
+    ├── adventure-ts/ Adventure batch workflow and suite version
+    ├── dmsh-ts/     Desktop Map Slicer Headless Tool Suite
     └── plmh-ts/     Portrait Layout Manager Headless Tool Suite
 ```
 
@@ -28,6 +51,29 @@ output collisions.
 ## Tools
 
 Run these examples from the repository root.
+
+- **Adventure** ([Help and full README](tools/adventure-ts/README.md))
+  - **Tool folder** `tools/adventure-ts/`
+  - **Name** D&D Tools Adventure Batch
+  - **Windows command** `bin\process_adventure.bat "<title>"`
+  - **macOS command** `sh bin/process_adventure.sh "<title>"`
+  - **Description** Builds the staged map and portrait images as one adventure.
+    Use DMSH or PLMH for a single image. The default adventure template is
+    `T000.json` in `tools/adventure-ts/src/Adventure.Cli/Templates/`.
+
+  ```bat
+  bin\process_adventure.bat "The Old Farmhouse" --date 261205 --template T000
+  bin\process_adventure.bat --help
+  bin\process_adventure.bat --version
+  bin\process_adventure.bat --templates
+  ```
+
+  ```sh
+  sh bin/process_adventure.sh "The Old Farmhouse" --date 261205 --template T000
+  sh bin/process_adventure.sh --help
+  sh bin/process_adventure.sh --version
+  sh bin/process_adventure.sh --templates
+  ```
 
 - **DMSH** ([Help and full README](tools/dmsh-ts/README.md))
   - **Tool folder** `tools/dmsh-ts/`

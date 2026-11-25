@@ -1,5 +1,9 @@
 # plmh-ts change log - Portrait Layout Manager (Headless) Tool Suite
 
+## 1.3.0
+
+- Support custom portrait lineup headings supplied by the adventure batch.
+
 ## 1.2.0
 
 - Added `bin/process_portraits.sh` for macOS. It defaults to batch mode and supports the source checkout and published CLI.

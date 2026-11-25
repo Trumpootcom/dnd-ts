@@ -6,9 +6,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Plmh.Core\Plmh.Core.csproj" />
+    <ProjectReference Include="..\Plmh.Core\Plmh.Core.csproj" GlobalPropertiesToRemove="AdventureBundle" />
     <EmbeddedResource Include="Templates/T000.jsonc" LogicalName="T000.jsonc" />
-    <None Update="Templates/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="../../../../bin/process_portraits.bat" Link="process_portraits.bat" CopyToPublishDirectory="PreserveNewest" />
+    <None Update="Templates/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest">
+      <TargetPath Condition="'$(AdventureBundle)' == 'true'">Templates/Plmh/%(Filename)%(Extension)</TargetPath>
+    </None>
+    <None Include="../../../../bin/process_portraits.bat" Link="process_portraits.bat" CopyToPublishDirectory="PreserveNewest" Condition="'$(AdventureBundle)' != 'true'" />
   </ItemGroup>
 </Project>

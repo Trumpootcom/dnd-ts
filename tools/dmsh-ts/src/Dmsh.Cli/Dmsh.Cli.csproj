@@ -6,10 +6,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Dmsh.Core\Dmsh.Core.csproj" />
+    <ProjectReference Include="..\Dmsh.Core\Dmsh.Core.csproj" GlobalPropertiesToRemove="AdventureBundle" />
     <EmbeddedResource Include="Templates/T000.json" LogicalName="T000.json" />
-    <None Update="Templates/*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="../../../../bin/process_maps.bat" Link="process_maps.bat" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="../../../../bin/process_maps.sh" Link="process_maps.sh" CopyToPublishDirectory="PreserveNewest" />
+    <None Update="Templates/*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest">
+      <TargetPath Condition="'$(AdventureBundle)' == 'true'">Templates/Dmsh/%(Filename)%(Extension)</TargetPath>
+    </None>
+    <None Include="../../../../bin/process_maps.bat" Link="process_maps.bat" CopyToPublishDirectory="PreserveNewest" Condition="'$(AdventureBundle)' != 'true'" />
+    <None Include="../../../../bin/process_maps.sh" Link="process_maps.sh" CopyToPublishDirectory="PreserveNewest" Condition="'$(AdventureBundle)' != 'true'" />
   </ItemGroup>
 </Project>

@@ -2,7 +2,7 @@ using Dmsh.Core;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-internal static class RenderCommands
+public static class RenderCommands
 {
     private static readonly Regex FilenameDimensions = new(@"(?<width>[0-9]+)[xX][0-9]+\z");
 
@@ -23,11 +23,22 @@ internal static class RenderCommands
         var backup = Path.Combine(projectRoot, "bak");
         if (string.Equals(incoming, backup, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("The incoming directory cannot also be the backup directory.");
-        var groups = Directory.GetFiles(incoming).Where(IsImage)
+        return RenderBatch(Directory.GetFiles(incoming).Where(IsImage), output, template, projectRoot, backup);
+    }
+
+    public static int BuildAdventureMaps(IReadOnlyList<string> images, string output, string templatePath, string root) =>
+        RenderBatch(images, output, ReadTemplate(templatePath, null,
+            Path.Combine(AppContext.BaseDirectory, "Templates", "Dmsh")), root, backup: null);
+
+    private static int RenderBatch(IEnumerable<string> images, string output, MapTemplate template,
+        string projectRoot, string? backup)
+    {
+        var groups = images
             .GroupBy(path => Path.GetFileNameWithoutExtension(path), StringComparer.OrdinalIgnoreCase)
             .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase);
         Directory.CreateDirectory(output);
-        Directory.CreateDirectory(backup);
+        if (backup is not null)
+            Directory.CreateDirectory(backup);
 
         var exitCode = 0;
         foreach (var group in groups)
@@ -42,7 +53,7 @@ internal static class RenderCommands
 
             var image = group.Single();
             var pdf = Path.Combine(output, Path.ChangeExtension(Path.GetFileName(image), ".pdf"));
-            var archivedImage = Path.Combine(backup, Path.GetFileName(image));
+            var archivedImage = backup is null ? null : Path.Combine(backup, Path.GetFileName(image));
             if (!RenderImage(template, image, pdf, projectRoot, archivedImage))
                 exitCode = 1;
         }
@@ -106,12 +117,12 @@ internal static class RenderCommands
         return Path.GetFileName(relative) == relative ? $".{Path.DirectorySeparatorChar}{relative}" : relative;
     }
 
-    private static bool IsImage(string path) =>
+    public static bool IsImage(string path) =>
         Path.GetExtension(path).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".bmp" or ".webp";
 
-    private static MapTemplate ReadTemplate(string? path, double? worldWidth)
+    private static MapTemplate ReadTemplate(string? path, double? worldWidth, string? bundledDirectory = null)
     {
-        var (template, fileName) = TemplateFiles.Read(path);
+        var (template, fileName) = TemplateFiles.Read(path, bundledDirectory);
         Console.WriteLine($"Using Template: {fileName} ({template.Template})");
         return worldWidth is { } feet ? template with { WorldWidthFeet = feet } : template;
     }

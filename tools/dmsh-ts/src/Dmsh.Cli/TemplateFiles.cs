@@ -7,12 +7,12 @@ internal static class TemplateFiles
     public const string DefaultName = "T000.json";
     private static string DirectoryPath => Path.Combine(AppContext.BaseDirectory, "Templates");
 
-    public static (MapTemplate Template, string FileName) Read(string? path)
+    public static (MapTemplate Template, string FileName) Read(string? path, string? bundledDirectory = null)
     {
         if (path is not null && !Path.HasExtension(path) && !File.Exists(path))
             path += ".json";
         var name = path ?? DefaultName;
-        var installedPath = Path.Combine(DirectoryPath, name);
+        var installedPath = Path.Combine(bundledDirectory ?? DirectoryPath, name);
         using var json = path is not null && (Path.GetFileName(path) != path || File.Exists(path))
             ? File.OpenRead(path)
             : File.Exists(installedPath) ? File.OpenRead(installedPath)

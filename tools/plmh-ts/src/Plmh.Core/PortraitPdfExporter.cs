@@ -12,7 +12,11 @@ public static class PortraitPdfExporter
     private const double CreatureNameRatio = 0.9;
 
     public static void Export(PortraitTemplate template, string templatePath,
-        IReadOnlyList<PortraitFileName> portraits, Stream destination, int imageDpi = DefaultImageDpi)
+        IReadOnlyList<PortraitFileName> portraits, Stream destination, int imageDpi = DefaultImageDpi) =>
+        Export(template, templatePath, portraits, destination, imageDpi, null);
+
+    public static void Export(PortraitTemplate template, string templatePath,
+        IReadOnlyList<PortraitFileName> portraits, Stream destination, int imageDpi, string? lineupTitle)
     {
         ArgumentNullException.ThrowIfNull(template);
         ArgumentException.ThrowIfNullOrWhiteSpace(templatePath);
@@ -147,7 +151,8 @@ public static class PortraitPdfExporter
         }
 
         DrawLineup(lineupPage, background, badge, lineup, pageWidth, pageHeight, margin,
-            template.LineupFrame, templateDirectory, portraits[0].EncounterId, labelColor, imageDpi, opaqueBackground);
+            template.LineupFrame, templateDirectory, lineupTitle ?? $"Encounter {portraits[0].EncounterId}",
+            labelColor, imageDpi, opaqueBackground);
         document.Options.CompressContentStreams = true;
         document.Save(destination, false);
     }
@@ -155,7 +160,7 @@ public static class PortraitPdfExporter
     private static void DrawLineup(PdfPage page, SKBitmap background, SKBitmap? badge,
         IReadOnlyList<(string Path, string Name, string TokenId, double WidthFeet, double HeightFeet, int BadgeScale)> lineup,
         double pageWidth, double pageHeight, double pageMargin,
-        LineupFrameTemplate? frame, string templateDirectory, string encounterName, XColor titleColor, int imageDpi,
+        LineupFrameTemplate? frame, string templateDirectory, string lineupTitle, XColor titleColor, int imageDpi,
         bool opaqueBackground)
     {
         const double rightMarginFeet = 1;
@@ -326,7 +331,7 @@ public static class PortraitPdfExporter
             {
                 if ((long)titleBand.Top + titleBand.Height > bottomTile.Height)
                     throw new InvalidDataException("Lineup frame title band must fit within the bottom tile.");
-                var title = PdfTextCanvas.Normalize($"Encounter {encounterName}");
+                var title = PdfTextCanvas.Normalize(lineupTitle);
                 var rowHeight = bottomTile.Height * frameScale;
                 var rowTop = frameBounds.Bottom - rowHeight;
                 var titleWidthPixels = width / frameScale;

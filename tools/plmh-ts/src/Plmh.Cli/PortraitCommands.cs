@@ -1,6 +1,6 @@
 using Plmh.Core;
 
-internal static class PortraitCommands
+public static class PortraitCommands
 {
     private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -17,11 +17,29 @@ internal static class PortraitCommands
             return 1;
         }
 
+        var images = Directory.GetFiles(incoming).Where(IsImage);
+        return RenderBatch(images, Path.Combine(root, "out"), templateArgument, root, imageDpi, strict: false);
+    }
+
+    public static bool IsImage(string path) => ImageExtensions.Contains(Path.GetExtension(path));
+
+    public static int BuildAdventurePortraits(IReadOnlyList<string> images, string output, string templatePath, string root) =>
+        BuildAdventurePortraits(images, output, templatePath, root, null);
+
+    public static int BuildAdventurePortraits(IReadOnlyList<string> images, string output, string templatePath, string root,
+        Func<string, string?>? lineupTitleForEncounter) =>
+        RenderBatch(images, output, templatePath, root, PortraitPdfExporter.DefaultImageDpi, strict: true,
+            lineupTitleForEncounter: lineupTitleForEncounter);
+
+    private static int RenderBatch(IEnumerable<string> images, string output, string? templateArgument,
+        string root, int imageDpi, bool strict, Func<string, string?>? lineupTitleForEncounter = null)
+    {
         PortraitTemplate template;
         string templatePath;
         try
         {
-            (template, templatePath) = ReadTemplate(templateArgument, root);
+            var bundled = strict ? Path.Combine(AppContext.BaseDirectory, "Templates", "Plmh") : null;
+            (template, templatePath) = ReadTemplate(templateArgument, root, bundled);
         }
         catch (Exception error)
         {
@@ -30,12 +48,11 @@ internal static class PortraitCommands
         }
         WriteTemplateStatus(template, templatePath, root);
 
-        var output = Path.Combine(root, "out");
         Directory.CreateDirectory(output);
         var portraits = new List<PortraitFileName>();
         var exitCode = 0;
-        foreach (var image in Directory.GetFiles(incoming)
-            .Where(path => ImageExtensions.Contains(Path.GetExtension(path)))
+        var outputNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var image in images
             .OrderBy(path => Path.GetFileName(path), StringComparer.OrdinalIgnoreCase))
         {
             try
@@ -81,7 +98,10 @@ internal static class PortraitCommands
             {
                 var safeEncounter = SafeFilePart(encounterId);
                 var pdf = Path.Combine(output, $"encounter_{safeEncounter.ToLowerInvariant()}.pdf");
-                return RenderGroup(template, templatePath, encounterPortraits, pdf, root, imageDpi);
+                if (strict && !outputNames.Add(pdf))
+                    throw new IOException($"Multiple encounters would produce {Path.GetFileName(pdf)}.");
+                return RenderGroup(template, templatePath, encounterPortraits, pdf, root, imageDpi,
+                    lineupTitleForEncounter?.Invoke(encounterId));
             }
             catch (Exception error)
             {
@@ -111,13 +131,13 @@ internal static class PortraitCommands
     }
 
     private static bool RenderGroup(PortraitTemplate template, string templatePath,
-        IReadOnlyList<PortraitFileName> portraits, string pdf, string root, int imageDpi)
+        IReadOnlyList<PortraitFileName> portraits, string pdf, string root, int imageDpi, string? lineupTitle = null)
     {
         var temporary = Path.Combine(Path.GetDirectoryName(pdf)!, $".{Path.GetFileName(pdf)}.{Guid.NewGuid():N}.tmp");
         try
         {
             using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                PortraitPdfExporter.Export(template, templatePath, portraits, output, imageDpi);
+                PortraitPdfExporter.Export(template, templatePath, portraits, output, imageDpi, lineupTitle);
             File.Move(temporary, pdf, overwrite: true);
             foreach (var portrait in portraits)
                 Console.WriteLine($"Processing image: {DisplayPath(root, portrait.Path)} -> {DisplayPath(root, pdf)}");
@@ -166,20 +186,20 @@ internal static class PortraitCommands
     private static string DisplayPaperValue(string value) =>
         char.ToUpperInvariant(value[0]) + value[1..].ToLowerInvariant();
 
-    private static string[] BundledTemplateDirectories(string root) =>
+    private static string[] BundledTemplateDirectories(string root, string? bundledDirectory = null) =>
     [
         Path.Combine(root, "tools", "plmh-ts", "src", "Plmh.Cli", "Templates"),
-        Path.Combine(AppContext.BaseDirectory, "Templates")
+        bundledDirectory ?? Path.Combine(AppContext.BaseDirectory, "Templates")
     ];
 
-    private static (PortraitTemplate Template, string Path) ReadTemplate(string? argument, string root)
+    private static (PortraitTemplate Template, string Path) ReadTemplate(string? argument, string root, string? bundledDirectory = null)
     {
-        var templatePath = ResolveTemplatePath(argument, root);
+        var templatePath = ResolveTemplatePath(argument, root, bundledDirectory);
         using var input = File.OpenRead(templatePath);
         return (PortraitTemplate.Read(input), templatePath);
     }
 
-    private static string ResolveTemplatePath(string? argument, string root)
+    private static string ResolveTemplatePath(string? argument, string root, string? bundledDirectory)
     {
         var name = string.IsNullOrWhiteSpace(argument) ? "T000" : argument.Trim();
         var direct = Path.GetFullPath(name, Directory.GetCurrentDirectory());
@@ -187,7 +207,7 @@ internal static class PortraitCommands
             return direct;
 
         string[] fileNames = Path.HasExtension(name) ? [name] : [name + ".jsonc", name + ".json"];
-        var directories = BundledTemplateDirectories(root).Append(AppContext.BaseDirectory);
+        var directories = BundledTemplateDirectories(root, bundledDirectory).Append(AppContext.BaseDirectory);
         var candidates = from directory in directories
                          from fileName in fileNames
                          select Path.Combine(directory, fileName);

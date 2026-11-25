@@ -107,7 +107,9 @@ ratio. Batch mode groups portraits by the first filename field and writes one
 PDF per encounter, such as `out/encounter_e1.pdf`; additional cards continue on
 new pages in that encounter PDF.
 
-The first page of each PDF shows the encounter lineup in portrait order. The
+The first page of each PDF shows the encounter lineup in portrait order. If
+the template has a title band, PLMH shows the encounter ID by default.
+`process_adventure` can supply the adventure and map name for that band. The
 cutouts share a baseline and a common scale based on the heights in their
 filenames. For a portrait without a height suffix, `defaultHeightFeet` supplies
 the lineup height by creature size. The built-in defaults are 1, 3, 6, 12, 24,

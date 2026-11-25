@@ -1,0 +1,7 @@
+{
+  "name": "Standard adventure",
+  "map_template": "T000",
+  "portraits_template": "T000",
+  "individualPDF": true,
+  "mergeOrder": "encounter"
+}
