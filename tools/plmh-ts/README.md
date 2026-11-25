@@ -9,6 +9,7 @@ printable nameplate layout and exports a PDF.
 
 - **Tool folder** `tools/plmh-ts/`
 - **Windows command** `bin\process_portraits.bat [command or image]`
+- **macOS command** `sh bin/process_portraits.sh [command or image]`
 - With no arguments or with `batch`, process images from `in_portraits/` and
   write one PDF per encounter to `out/`.
 - Pass a portrait image path to create one PDF beside that image.
@@ -26,6 +27,11 @@ The first two commands are equivalent. Use the filename of a portrait in
 your workspace for the single-image commands. For the custom template example,
 substitute the path to your template file.
 
+Running the macOS launcher from a checkout requires the .NET 10 SDK on your
+`PATH`. With a published copy, place the macOS `Plmh.Cli` executable or the
+`Plmh.Cli.dll` and its companion files beside the script. A framework-dependent
+publish requires the .NET 10 runtime.
+
 ```bat
 bin\process_portraits.bat
 bin\process_portraits.bat batch
@@ -36,10 +42,26 @@ bin\process_portraits.bat --template "path\to\custom.jsonc" "in_portraits\e1_f1_
 
 bin\process_portraits.bat --help
 bin\process_portraits.bat --version
+bin\process_portraits.bat --templates
+```
+
+```sh
+sh bin/process_portraits.sh
+sh bin/process_portraits.sh batch
+sh bin/process_portraits.sh "in_portraits/e1_f1_mistborn dragon_medium_dragon.png"
+sh bin/process_portraits.sh --dpi 300 "in_portraits/e1_f1_mistborn dragon_medium_dragon.png"
+sh bin/process_portraits.sh batch --dpi 300
+sh bin/process_portraits.sh --template "path/to/custom.jsonc" "in_portraits/e1_f1_mistborn dragon_medium_dragon.png"
+
+sh bin/process_portraits.sh --help
+sh bin/process_portraits.sh --version
+sh bin/process_portraits.sh --templates
 ```
 
 `--help` lists commands and options. `--version` prints the version and UTC
-build time.
+build time. `--templates` lists bundled template filenames, names, paper sizes,
+orientations, and the default image DPI. The DPI is shared by all templates
+and can be overridden for an export with `--dpi`.
 
 ## Templates
 
@@ -203,8 +225,9 @@ extension is not restricted by the parser.
 ## Status
 
 Filename parsing, template loading, portrait composition, PDF export, encounter
-grouping, and per-image status reporting are implemented. Batch mode writes one
+grouping, template listing, and per-image status reporting are implemented. Batch mode writes one
 PDF per encounter to `out/`; single-image mode writes one PDF beside the source.
+Launchers are available for Windows and macOS.
 
 ## TODO
 

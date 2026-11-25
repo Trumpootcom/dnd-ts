@@ -16,6 +16,8 @@ if (args is ["--help"] or ["-h"] or ["help"])
         {displayName}
         Portrait Layout Manager Headless Tool Suite
 
+        macOS launcher: sh bin/process_portraits.sh [command or image]
+
         Usage: Plmh.Cli [batch] [--template <name-or-path>] [--dpi <value>]
                Plmh.Cli [--template <name-or-path>] [--dpi <value>] <portrait-path>
 
@@ -25,6 +27,7 @@ if (args is ["--help"] or ["-h"] or ["help"])
           --dpi <value>         Target image DPI (default {PortraitPdfExporter.DefaultImageDpi}). Use 0 to disable downsampling.
           --help, -h            Show this help.
           --version, -v         Show the version and UTC build time.
+          --templates           List bundled templates with paper settings and default image DPI.
 
         Batch groups portraits by encounter and writes one PDF per encounter to <workspace>/out.
         Source portraits are retained.
@@ -32,9 +35,15 @@ if (args is ["--help"] or ["-h"] or ["help"])
     return;
 }
 
-Console.WriteLine(displayName);
 try
 {
+    if (args is ["--templates"])
+    {
+        PortraitCommands.ListTemplates();
+        return;
+    }
+
+    Console.WriteLine(displayName);
     if (args.Length == 0)
     {
         Environment.ExitCode = PortraitCommands.Batch(null);

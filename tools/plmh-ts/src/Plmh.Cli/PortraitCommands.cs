@@ -137,6 +137,41 @@ internal static class PortraitCommands
         }
     }
 
+    public static void ListTemplates()
+    {
+        var templates = BundledTemplateDirectories(FindProjectRoot())
+            .Where(Directory.Exists)
+            .SelectMany(directory => Directory.EnumerateFiles(directory))
+            .Where(path => Path.GetExtension(path) is ".json" or ".jsonc")
+            .DistinctBy(path => Path.GetFileName(path), StringComparer.Ordinal)
+            .OrderBy(path => Path.GetFileName(path), StringComparer.Ordinal)
+            .Select(path =>
+            {
+                using var input = File.OpenRead(path);
+                var template = PortraitTemplate.Read(input);
+                return $"""
+                    File:  {Path.GetFileName(path)} ({template.Template})
+                    Paper: {DisplayPaperValue(template.Page.Size)} - {DisplayPaperValue(template.Page.Orientation)}
+                    DPI:   {PortraitPdfExporter.DefaultImageDpi}
+                    """;
+            })
+            .ToArray();
+
+        if (templates.Length == 0)
+            throw new FileNotFoundException("No bundled portrait templates found.");
+
+        Console.WriteLine(string.Join(Environment.NewLine + Environment.NewLine, templates));
+    }
+
+    private static string DisplayPaperValue(string value) =>
+        char.ToUpperInvariant(value[0]) + value[1..].ToLowerInvariant();
+
+    private static string[] BundledTemplateDirectories(string root) =>
+    [
+        Path.Combine(root, "tools", "plmh-ts", "src", "Plmh.Cli", "Templates"),
+        Path.Combine(AppContext.BaseDirectory, "Templates")
+    ];
+
     private static (PortraitTemplate Template, string Path) ReadTemplate(string? argument, string root)
     {
         var templatePath = ResolveTemplatePath(argument, root);
@@ -152,12 +187,7 @@ internal static class PortraitCommands
             return direct;
 
         string[] fileNames = Path.HasExtension(name) ? [name] : [name + ".jsonc", name + ".json"];
-        var directories = new[]
-        {
-            Path.Combine(root, "tools", "plmh-ts", "src", "Plmh.Cli", "Templates"),
-            Path.Combine(AppContext.BaseDirectory, "Templates"),
-            AppContext.BaseDirectory
-        };
+        var directories = BundledTemplateDirectories(root).Append(AppContext.BaseDirectory);
         var candidates = from directory in directories
                          from fileName in fileNames
                          select Path.Combine(directory, fileName);

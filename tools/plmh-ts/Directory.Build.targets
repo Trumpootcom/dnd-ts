@@ -1,26 +1,8 @@
 <Project>
   <Target Name="GenerateToolVersionMetadata" BeforeTargets="GetAssemblyVersion">
-    <Exec Command="git rev-list --count HEAD -- ." WorkingDirectory="$(MSBuildThisFileDirectory)" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
-      <Output TaskParameter="ConsoleOutput" ItemName="_ToolCommitCountOutput" />
-      <Output TaskParameter="ExitCode" PropertyName="_ToolCommitCountExitCode" />
-    </Exec>
-    <Exec Command="git --no-optional-locks status --porcelain -- ." WorkingDirectory="$(MSBuildThisFileDirectory)" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
-      <Output TaskParameter="ConsoleOutput" ItemName="_ToolStatusOutput" />
-      <Output TaskParameter="ExitCode" PropertyName="_ToolStatusExitCode" />
-    </Exec>
     <PropertyGroup>
-      <_ToolCommitCount>1</_ToolCommitCount>
-      <_ToolCommitCount Condition="'$(_ToolCommitCountExitCode)' == '0'">@(_ToolCommitCountOutput)</_ToolCommitCount>
-      <_ToolCommitChanges>$([MSBuild]::Subtract($(_ToolCommitCount), 1))</_ToolCommitChanges>
-      <_HasUncommittedToolChanges>false</_HasUncommittedToolChanges>
-      <_HasUncommittedToolChanges Condition="'$(_ToolStatusExitCode)' == '0' and '@(_ToolStatusOutput->Count())' != '0'">true</_HasUncommittedToolChanges>
-      <_UncommittedToolChangeCount>0</_UncommittedToolChangeCount>
-      <_UncommittedToolChangeCount Condition="'$(_HasUncommittedToolChanges)' == 'true'">1</_UncommittedToolChangeCount>
-      <_ToolRevision>$([MSBuild]::Add($(VersionPatchBase), $(_ToolCommitChanges)))</_ToolRevision>
-      <_ToolRevision>$([MSBuild]::Add($(_ToolRevision), $(_UncommittedToolChangeCount)))</_ToolRevision>
       <_BuildTimestampUtc>$([System.DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))</_BuildTimestampUtc>
-      <Version>$(VersionPrefix).$(_ToolRevision)</Version>
-      <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
+      <AssemblyVersion>$([System.Version]::Parse('$(Version)').ToString(2)).0</AssemblyVersion>
       <FileVersion>$(AssemblyVersion)</FileVersion>
       <InformationalVersion>$(Version)</InformationalVersion>
     </PropertyGroup>

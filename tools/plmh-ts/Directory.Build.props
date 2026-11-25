@@ -1,8 +1,6 @@
 <Project>
   <PropertyGroup>
-    <VersionPrefix>1.0</VersionPrefix>
-    <VersionPatchBase>0</VersionPatchBase>
-    <VersionSuffix></VersionSuffix>
+    <Version>1.2.0</Version>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>

@@ -27,59 +27,70 @@ output collisions.
 
 ## Tools
 
-- **DMSH** (See [DMSH README](tools/dmsh-ts/README.md) for full details.)
-  - **Tool folder:** `tools/dmsh-ts/`
-  - **Name:** Desktop Map Slicer Headless Tool Suite
-  - **Windows command:** `bin\process_maps.bat [command or image]`
-  - **macOS command:** `sh bin/process_maps.sh [command or image]`
-  - **Description:**
-    - Turns tabletop map images into printable PDF sheets.
-    - With no arguments or with `batch`
-      - batch-processes maps from `in_maps/`
-      - writes PDFs to `out/`
-      - archives successfully processed images in `bak/`.
-    - or pass filename such as `map.png` to slice a single map image.
-    - Use `--width 120` to override the map width in feet.
-    - A filename ending in `WxH` sets the width from its first number.
-      - for example, `E1 Farmhouse 100x60.jpg` uses a width of 100 feet.
-    - Use `--template <template_name>` to select a template by name.
-      - Templates are in `tools/dmsh-ts/src/Dmsh.Cli/Templates/`.
-      - `T000.json` is the default template.
+Run these examples from the repository root.
 
-  Examples:
+- **DMSH** ([Help and full README](tools/dmsh-ts/README.md))
+  - **Tool folder** `tools/dmsh-ts/`
+  - **Name** Desktop Map Slicer Headless Tool Suite
+  - **Windows command** `bin\process_maps.bat [command or image]`
+  - **macOS command** `sh bin/process_maps.sh [command or image]`
+  - **Description**
+    - Pass a map image to slice it into printable sheets and save the PDF beside the image.
+    - Run with no arguments or with `batch` to process `in_maps/`, write PDFs to `out/`, and move successfully processed images to `bak/`.
+    - Bundled templates are in `tools/dmsh-ts/src/Dmsh.Cli/Templates/`. The default is `T000.json`. Use `--template` with a template name or file path.
+    - Use `--width` to set the map width in feet. A filename suffix such as `100x60` takes precedence and sets the width to 100 feet.
+
+  **Examples**
 
   ```bat
-  bin\process_maps.bat                            // batch process in_maps/
-  bin\process_maps.bat batch                      // batch process in_maps/
-  bin\process_maps.bat map.png                    // process map.png
-  bin\process_maps.bat --width 120 map.png        // override width to 120ft
-  bin\process_maps.bat E1_Farmhouse_100x60.jpg    // override width to 100ft
-  bin\process_maps.bat --template T001 map.png    // override template
-
-  bin\process_maps.bat --help                     // show help file
-  bin\process_maps.bat --version                  // show version
-  bin\process_maps.bat --templates                // show list of templates
+  bin\process_maps.bat batch
+  bin\process_maps.bat samples\maps\map.png
+  bin\process_maps.bat --width 120 samples\maps\map.png
+  bin\process_maps.bat --template T001 samples\maps\map.png
+  bin\process_maps.bat --help
+  bin\process_maps.bat --version
+  bin\process_maps.bat --templates
   ```
 
   ```sh
-  sh bin/process_maps.sh                          # batch process in_maps/
-  sh bin/process_maps.sh batch                    # batch process in_maps/
-  sh bin/process_maps.sh map.png                  # process map.png
-  sh bin/process_maps.sh --width 120 map.png      # override width to 120ft
-  sh bin/process_maps.sh E1_Farmhouse_100x60.jpg  # override width to 100ft
-  sh bin/process_maps.sh --template T001 map.png  # override template
-
-  sh bin/process_maps.sh --help                   # show help
-  sh bin/process_maps.sh --version                # show version
-  sh bin/process_maps.sh --templates              # show list of templates
+  sh bin/process_maps.sh batch
+  sh bin/process_maps.sh samples/maps/map.png
+  sh bin/process_maps.sh --width 120 samples/maps/map.png
+  sh bin/process_maps.sh --template T001 samples/maps/map.png
+  sh bin/process_maps.sh --help
+  sh bin/process_maps.sh --version
+  sh bin/process_maps.sh --templates
   ```
 
-- **PLMH** (See [PLMH README](tools/plmh-ts/README.md) for full details.)
-  - **Tool folder:** `tools/plmh-ts/`
-  - **Name:** Portrait Layout Manager Headless Tool Suite
-  - **Windows command:** `bin\process_portraits.bat [batch or portrait path]`
-  - **Description:** Creates printable PDFs from portraits using filename metadata and a JSON template.
-    - With no arguments or with `batch`, groups `in_portraits/` images by encounter and writes one PDF per encounter to `out/`.
-    - Pass a portrait file path to write a single PDF beside that image.
-    - Source portrait files are retained in `in_portraits/`.
-    - `T000.json` is the default template in `tools/plmh-ts/src/Plmh.Cli/Templates/`.
+- **PLMH** ([Help and full README](tools/plmh-ts/README.md))
+  - **Tool folder** `tools/plmh-ts/`
+  - **Name** Portrait Layout Manager Headless Tool Suite
+  - **Windows command** `bin\process_portraits.bat [command or image]`
+  - **macOS command** `sh bin/process_portraits.sh [command or image]`
+  - **Description**
+    - Pass a portrait image to create a printable PDF beside it. Filenames use the format `encounter_token_name_size_type` with an optional height in the size field, such as `medium(5-2)`.
+    - Run with no arguments or with `batch` to group images from `in_portraits/` and write one PDF per encounter to `out/`. PDFs include a lineup and portrait cards. Source images stay in place.
+    - Bundled templates are in `tools/plmh-ts/src/Plmh.Cli/Templates/`. The default is `T000.jsonc`. Use `--template` with a template name or file path, or `--templates` to list bundled templates.
+    - Use `--dpi` to change the default image resolution of 100 DPI.
+
+  **Examples**
+
+  ```bat
+  bin\process_portraits.bat batch
+  bin\process_portraits.bat "in_portraits\e1_f1_mistborn dragon_medium_dragon.png"
+  bin\process_portraits.bat batch --dpi 300
+  bin\process_portraits.bat batch --template "path\to\custom.jsonc"
+  bin\process_portraits.bat --help
+  bin\process_portraits.bat --version
+  bin\process_portraits.bat --templates
+  ```
+
+  ```sh
+  sh bin/process_portraits.sh batch
+  sh bin/process_portraits.sh "in_portraits/e1_f1_mistborn dragon_medium_dragon.png"
+  sh bin/process_portraits.sh batch --dpi 300
+  sh bin/process_portraits.sh batch --template "path/to/custom.jsonc"
+  sh bin/process_portraits.sh --help
+  sh bin/process_portraits.sh --version
+  sh bin/process_portraits.sh --templates
+  ```
