@@ -11,8 +11,7 @@ compatibility notes and remaining work.
 - **macOS command:** `sh bin/process_maps.sh [command or image]`
 - **Description:**
   - With no arguments or with `batch`, process images from the workspace's
-    `in_maps/`, write PDFs to `out/`, and move successfully processed images
-    to `bak/`.
+    `in_maps/`, write PDFs to `out/`, and leave source images in place.
   - Pass an image path, such as `map.png`, to create one PDF beside that image.
   - Use `--width <feet>` to override the map width. A filename ending in
     `WxH` or `WXH` sets the width from its first number and takes precedence
@@ -21,12 +20,10 @@ compatibility notes and remaining work.
     default.
 
 Run commands from the umbrella workspace. Relative image paths are resolved
-from the current directory. Batch mode reads the top level of `in_maps/` and
-archives successful inputs in the shared `bak/` folder. It continues after
-individual failures and returns exit code 1 if an image fails or is skipped
+from the current directory. Batch mode reads the top level of `in_maps/`.
+It continues after individual failures and returns exit code 1 if an image fails or is skipped
 because of a conflict. Existing output PDFs are replaced after the new PDF is
-written successfully. A source image is moved to `bak/` only after its PDF is
-saved.
+written successfully.
 
 ### Command examples
 

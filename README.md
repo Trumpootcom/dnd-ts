@@ -82,7 +82,7 @@ Run these examples from the repository root.
   - **macOS command** `sh bin/process_maps.sh [command or image]`
   - **Description**
     - Pass a map image to slice it into printable sheets and save the PDF beside the image.
-    - Run with no arguments or with `batch` to process `in_maps/`, write PDFs to `out/`, and move successfully processed images to `bak/`.
+    - Run with no arguments or with `batch` to process `in_maps/` and write PDFs to `out/`. Source images stay in place.
     - Bundled templates are in `tools/dmsh-ts/src/Dmsh.Cli/Templates/`. The default is `T000.json`. Use `--template` with a template name or file path.
     - Use `--width` to set the map width in feet. A filename suffix such as `100x60` takes precedence and sets the width to 100 feet.
 

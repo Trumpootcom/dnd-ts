@@ -1,0 +1,9 @@
+# dmsh-ts changelog - Desktop Map Slicer (Headless) Tool Suite
+
+## 1.0.25
+
+- Batch map processing leaves all source images in the input folder.
+
+## 1.0.24
+
+- Established the changelog baseline for the map-processing tool.

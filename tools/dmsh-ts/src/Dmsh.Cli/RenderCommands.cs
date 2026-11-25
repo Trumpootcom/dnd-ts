@@ -20,25 +20,20 @@ public static class RenderCommands
         incoming = Path.TrimEndingDirectorySeparator(Path.GetFullPath(
             incoming ?? Path.Combine(projectRoot, "in_maps")));
         output = Path.GetFullPath(output ?? Path.Combine(projectRoot, "out"));
-        var backup = Path.Combine(projectRoot, "bak");
-        if (string.Equals(incoming, backup, StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("The incoming directory cannot also be the backup directory.");
-        return RenderBatch(Directory.GetFiles(incoming).Where(IsImage), output, template, projectRoot, backup);
+        return RenderBatch(Directory.GetFiles(incoming).Where(IsImage), output, template, projectRoot);
     }
 
     public static int BuildAdventureMaps(IReadOnlyList<string> images, string output, string templatePath, string root) =>
         RenderBatch(images, output, ReadTemplate(templatePath, null,
-            Path.Combine(AppContext.BaseDirectory, "Templates", "Dmsh")), root, backup: null);
+            Path.Combine(AppContext.BaseDirectory, "Templates", "Dmsh")), root);
 
     private static int RenderBatch(IEnumerable<string> images, string output, MapTemplate template,
-        string projectRoot, string? backup)
+        string projectRoot)
     {
         var groups = images
             .GroupBy(path => Path.GetFileNameWithoutExtension(path), StringComparer.OrdinalIgnoreCase)
             .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase);
         Directory.CreateDirectory(output);
-        if (backup is not null)
-            Directory.CreateDirectory(backup);
 
         var exitCode = 0;
         foreach (var group in groups)
@@ -53,22 +48,18 @@ public static class RenderCommands
 
             var image = group.Single();
             var pdf = Path.Combine(output, Path.ChangeExtension(Path.GetFileName(image), ".pdf"));
-            var archivedImage = backup is null ? null : Path.Combine(backup, Path.GetFileName(image));
-            if (!RenderImage(template, image, pdf, projectRoot, archivedImage))
+            if (!RenderImage(template, image, pdf, projectRoot))
                 exitCode = 1;
         }
         return exitCode;
     }
 
     private static bool RenderImage(MapTemplate template, string image, string pdf,
-        string projectRoot, string? archivedImage = null)
+        string projectRoot)
     {
         var status = $"Processing image: {DisplayPath(projectRoot, image)}";
         try
         {
-            if (archivedImage is not null && (File.Exists(archivedImage) || Directory.Exists(archivedImage)))
-                throw new IOException($"Backup path already exists: {DisplayPath(projectRoot, archivedImage)}");
-
             var dimensions = FilenameDimensions.Match(Path.GetFileNameWithoutExtension(image));
             if (dimensions.Success)
             {
@@ -80,9 +71,6 @@ public static class RenderCommands
 
             Save(template, image, pdf);
             status += $" -> {DisplayPath(projectRoot, pdf)}";
-            if (archivedImage is not null)
-                File.Move(image, archivedImage);
-
             Console.WriteLine(status);
             return true;
         }

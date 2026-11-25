@@ -1,9 +1,6 @@
 <Project>
   <PropertyGroup>
-    <!-- Major, Minor, and the revision baseline are maintained per tool. -->
-    <VersionPrefix>1.0</VersionPrefix>
-    <VersionPatchBase>21</VersionPatchBase>
-    <VersionSuffix></VersionSuffix>
+    <Version>1.0.25</Version>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>

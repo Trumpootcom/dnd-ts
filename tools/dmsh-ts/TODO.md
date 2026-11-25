@@ -16,7 +16,7 @@
 - [x] Ship numbered templates `T000.json` through `T003.json` and read their display names from the `template` field.
 - [x] Add `--templates` to list template filenames, names, paper layouts, grid settings, and usable world dimensions. The output can be redirected to a text file without a prompt.
 - [x] Accept per-image width overrides from filename suffixes, fit maps to 5-foot dimensions, and clip coordinate labels at individual sheet margins.
-- [ ] Verify that batch mode continues after invalid images, filename conflicts, and archive failures, and that each failed source remains in the input folder.
+- [ ] Verify that batch mode continues after invalid images and filename conflicts, and that all source images remain in the input folder.
 - [x] Check that .NET accepts an image at the 12-megapixel limit, rejects one above it before decoding pixel data, and keeps memory use bounded during a batch of large images.
 - [x] Add built-in general and per-command help so someone with only the executable can discover its usage.
 - [x] Bundle `T000.json` with the CLI and document how it is used when `--template` is omitted.

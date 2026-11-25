@@ -16,7 +16,7 @@ internal static class CommandHelp
                   Export one JPEG, PNG, BMP or static WebP to a PDF beside it.
                   Example: Dmsh.Cli map.png
               {Batch}
-                  Export images from one folder and archive successful inputs.
+                  Export images from one folder and leave the originals in place.
 
               --help, -h      Show this help.
               --version, -v   Show the version and UTC build time.
@@ -41,9 +41,8 @@ internal static class CommandHelp
 
                 Process supported images in the top level of the incoming directory.
                 Defaults to <workspace>/in_maps and <workspace>/out.
-                Save each PDF in out, then move the source to <workspace>/bak.
-                Reports per-image
-                failures and continues. Returns exit code 1 if any image failed.
+                Saves each PDF in the output directory and leaves source images in place.
+                Reports per-image failures and continues. Returns exit code 1 if any image failed.
 
                 Uses the built-in T000.json unless you supply --template.
                 The .json extension is optional.
