@@ -32,6 +32,8 @@ merged PDF metadata.
 
 ## Adventure files
 
+See [Building Jebs Cabin Adventure](tutial.md) for a complete walkthrough.
+
 See [Jebs Cabin](../../adventures/Jebs%20Cabin.adventure.json) for a complete
 example with reusable creatures. The Old Farmhouse example uses placeholder
 image paths that need to be filled in before building.
@@ -70,6 +72,8 @@ Portrait lineup titles are rendered in small caps.
 
 Validation reports missing resources and invalid encounter metadata before
 rendering. Successful builds publish to the workspace's `out/` folder.
+When a build publishes exactly one PDF, the command opens it in the system's
+default PDF viewer. If the viewer cannot open, the PDF remains in `out/`.
 Adventure-file builds run without an archive prompt and keep library assets
 in place.
 
@@ -126,6 +130,48 @@ in place.
    This gives you one lineup portrait labeled `B` and two cards labeled
    `B1` and `B2`. Set `height` on the encounter entry to override the
    creature's height for that entry.
+
+## Share an adventure bundle
+
+From the workspace root, export an adventure by title or by its
+`.adventure.json` path under `adventures/`.
+
+```bat
+bin\process_adventure.bat "Jebs Cabin" --export "Jebs Cabin.dndts"
+```
+
+```sh
+sh bin/process_adventure.sh "Jebs Cabin" --export "Jebs Cabin.dndts"
+```
+
+A `.dndts` file is a ZIP archive containing one adventure and its referenced
+files under `library/locations/`, `library/maps/`, `library/creatures/`, and
+`library/portraits/`. The archive preserves workspace-relative paths and
+includes shared assets once. Use relative references with forward slashes in
+the JSON. Export validates the adventure, leaves existing bundles in place,
+and produces no PDFs.
+Add `--verbose` to the export command to print the archive's folder and file tree.
+
+To build a bundle in another workspace, run:
+
+```bat
+bin\process_adventure.bat -f "Jebs Cabin.dndts"
+```
+
+```sh
+sh bin/process_adventure.sh -f "Jebs Cabin.dndts"
+```
+
+The command builds from the bundled assets and publishes PDFs to the
+receiving workspace's `out/`. You can use `--date` and `--template` when
+building. Adventure templates come from the receiving workspace or the
+installed tool.
+
+After a successful build, the command asks whether to import the bundle's
+referenced resources into `library/`. Press Enter to decline. If you accept,
+the import skips identical files and asks before overwriting each differing
+file. The adventure JSON stays in the bundle, and the PDFs are available
+regardless of your import choices.
 
 ## Templates
 

@@ -23,7 +23,7 @@ internal sealed record AdventureFile(string Title, string? Date, List<AdventureM
         }
     }
 
-    public static AdventureFile Load(string path)
+    public static AdventureFile Load(string path, AdventureBundleFiles? bundle = null)
     {
         var document = Read<Document>(path);
         var directory = Path.GetDirectoryName(path)!;
@@ -66,15 +66,15 @@ internal sealed record AdventureFile(string Title, string? Date, List<AdventureM
                     {
                         if (file is not null || widthFeet is not null)
                             throw new ArgumentException("A location reference takes its file and widthFeet from the library entry.");
-                        var path = ResolvePath(directory, reference);
-                        var libraryMap = Read<LibraryMap>(path);
-                        imageDirectory = Path.GetDirectoryName(path)!;
+                        var locationPath = ResolvePath(directory, reference, bundle);
+                        var libraryMap = Read<LibraryMap>(locationPath);
+                        imageDirectory = Path.GetDirectoryName(locationPath)!;
                         file = libraryMap.File;
                         widthFeet = libraryMap.WidthFeet
                             ?? throw new ArgumentException("A library map must specify widthFeet.");
                     }
 
-                    var image = ImagePath(imageDirectory, file, RenderCommands.IsImage);
+                    var image = ImagePath(imageDirectory, file, RenderCommands.IsImage, bundle);
                     var name = map?.Name?.Trim() ?? Path.GetFileNameWithoutExtension(image);
                     if (string.IsNullOrWhiteSpace(name))
                         throw new ArgumentException("Map name must not be empty.");
@@ -104,7 +104,7 @@ internal sealed record AdventureFile(string Title, string? Date, List<AdventureM
                     if (quantity < 1)
                         throw new ArgumentException("qty must be a positive integer.");
 
-                    var resolved = ResolvePortrait(directory, id, token, portrait);
+                    var resolved = ResolvePortrait(directory, id, token, portrait, bundle);
                     for (var index = 0; index < quantity; index++)
                     {
                         var tokenId = portrait.Qty.HasValue
@@ -138,20 +138,21 @@ internal sealed record AdventureFile(string Title, string? Date, List<AdventureM
         return new AdventureFile(title, document.Date, maps, portraits, encounters);
     }
 
-    private static PortraitFileName ResolvePortrait(string directory, string id, string token, Portrait portrait)
+    private static PortraitFileName ResolvePortrait(string directory, string id, string token, Portrait portrait,
+        AdventureBundleFiles? bundle)
     {
         Creature? creature = null;
         string? creatureDirectory = null;
         if (portrait.Creature is { } reference)
         {
-            var path = ResolvePath(directory, reference);
+            var path = ResolvePath(directory, reference, bundle);
             creature = Read<Creature>(path);
             creatureDirectory = Path.GetDirectoryName(path);
         }
 
         var image = portrait.File is { } file
-            ? ImagePath(directory, file, PortraitCommands.IsImage)
-            : ImagePath(creatureDirectory ?? directory, creature?.Portrait, PortraitCommands.IsImage);
+            ? ImagePath(directory, file, PortraitCommands.IsImage, bundle)
+            : ImagePath(creatureDirectory ?? directory, creature?.Portrait, PortraitCommands.IsImage, bundle);
         var name = portrait.Name ?? creature?.Name ?? Path.GetFileNameWithoutExtension(image);
         var size = portrait.Size ?? creature?.Size;
         var type = portrait.Type ?? creature?.Type;
@@ -174,24 +175,26 @@ internal sealed record AdventureFile(string Title, string? Date, List<AdventureM
         }
     }
 
-    private static string ImagePath(string directory, string? file, Func<string, bool> isImage)
+    private static string ImagePath(string directory, string? file, Func<string, bool> isImage,
+        AdventureBundleFiles? bundle)
     {
-        var path = ResolvePath(directory, file);
+        var path = ResolvePath(directory, file, bundle);
         if (!isImage(path))
             throw new ArgumentException($"Unsupported image format: '{path}'.");
         using var image = File.OpenRead(path);
         return path;
     }
 
-    private static string ResolvePath(string directory, string? file)
+    private static string ResolvePath(string directory, string? file, AdventureBundleFiles? bundle)
     {
         if (string.IsNullOrWhiteSpace(file))
             throw new ArgumentException("An image, map, or creature file path is required.");
-        return Path.GetFullPath(file, directory);
+        return bundle is null ? Path.GetFullPath(file, directory) : bundle.Resolve(directory, file);
     }
 
     private static bool IsInputError(Exception error) =>
-        error is ArgumentException or IOException or UnauthorizedAccessException or JsonException or NotSupportedException;
+        error is ArgumentException or IOException or InvalidDataException or UnauthorizedAccessException or
+            JsonException or NotSupportedException;
 
     public static bool IsFolderName(string value) => value.Length > 0 && !value.EndsWith('.') &&
         !value.Any(character => char.IsControl(character) || "<>:\"/\\|?*".Contains(character));

@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Numerics;
 using System.Security.Cryptography;
@@ -124,6 +126,9 @@ internal static class AdventureBuild
             foreach (var filename in filenames)
                 Console.WriteLine($"  {filename}");
 
+            if (filenames is [string filenameToOpen])
+                OpenPdf(Path.Combine(destination, filenameToOpen));
+
             if (adventure is not null)
                 return 0;
 
@@ -145,6 +150,18 @@ internal static class AdventureBuild
         finally
         {
             CleanDirectory(stage.FullName);
+        }
+    }
+
+    private static void OpenPdf(string path)
+    {
+        try
+        {
+            using var viewer = Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+        }
+        catch (Exception error) when (error is Win32Exception or InvalidOperationException or NotSupportedException)
+        {
+            Console.Error.WriteLine($"Could not open '{path}': {error.Message}");
         }
     }
 
@@ -172,7 +189,7 @@ internal static class AdventureBuild
 
         var mapStatus = adventure.Maps.Count == 0 ? 0 :
             RenderCommands.BuildAdventureMaps(adventure.Maps.Select(map =>
-                    (map.Image, map.PdfName, map.WidthFeet, OverviewTitle(map.EncounterId))),
+                    (map.Image, map.PdfName, map.WidthFeet, (string?)OverviewTitle(map.EncounterId))),
                 mapOutput, template.MapTemplate, root);
         var portraitStatus = adventure.Portraits.Count == 0 ? 0 :
             PortraitCommands.BuildAdventurePortraits(adventure.Portraits, portraitOutput, template.PortraitsTemplate, root,

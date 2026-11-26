@@ -27,6 +27,9 @@ features, and a major bump for breaking changes to a stable public
 interface. If a request contains several changes, apply the highest
 required bump once per affected tool.
 
+Ask for the user's approval before changing a tool's major or minor
+version number. Patch bumps can be applied without asking.
+
 Keep a `CHANGELOG.md` in each tool's directory. Add a `## <version>`
 heading below the title and above older entries. Summarize user-facing
 changes since the previous version. Use these titles for the existing tools:

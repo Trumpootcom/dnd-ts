@@ -19,6 +19,7 @@ sh bin/process_adventure.sh "Jebs Cabin"
 
 The cabin adventure uses reusable maps and portraits from `library/`. Builds
 write PDFs to `out/<YYMMDD> - <title>/` and leave the library files in place.
+When a build produces exactly one PDF, it opens in the system's default viewer.
 An adventure portrait entry can use `qty` to create numbered tokens from one
 creature reference. The lineup shows each group once with its token prefix,
 and every numbered token gets a portrait card.
@@ -26,6 +27,9 @@ Creature files can supply a default height, and encounter portrait entries
 can override it.
 Use `location` in an encounter map entry to reference a JSON file in
 `library/locations/` that stores the image path and width in feet.
+Use `--export` to share an adventure and its assets as a `.dndts` bundle.
+Add `--verbose` to print the exported bundle's file tree.
+Use `-f` to build a bundle and optionally import its library resources.
 If a title has no matching adventure file, the command reads staged images
 from `in_maps/` and `in_portraits/` and offers to archive them after a successful
 build. The default template publishes separate adventure-file PDFs such as
@@ -83,6 +87,8 @@ Run these examples from the repository root.
   ```bat
   bin\process_adventure.bat "Jebs Cabin" --date 261205 --template T000
   bin\process_adventure.bat "adventures\Jebs Cabin.adventure.json"
+  bin\process_adventure.bat "Jebs Cabin" --export "Jebs Cabin.dndts"
+  bin\process_adventure.bat -f "Jebs Cabin.dndts"
   bin\process_adventure.bat --help
   bin\process_adventure.bat --version
   bin\process_adventure.bat --templates
@@ -91,6 +97,8 @@ Run these examples from the repository root.
   ```sh
   sh bin/process_adventure.sh "Jebs Cabin" --date 261205 --template T000
   sh bin/process_adventure.sh "adventures/Jebs Cabin.adventure.json"
+  sh bin/process_adventure.sh "Jebs Cabin" --export "Jebs Cabin.dndts"
+  sh bin/process_adventure.sh -f "Jebs Cabin.dndts"
   sh bin/process_adventure.sh --help
   sh bin/process_adventure.sh --version
   sh bin/process_adventure.sh --templates
