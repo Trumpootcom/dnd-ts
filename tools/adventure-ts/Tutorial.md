@@ -163,3 +163,65 @@ The map and portrait overviews share the heading
 **Jebs Cabin - ENC1 - Cabin in the Woods**. The portrait overview shows
 four labels, `A1`, `B`, `C1`, and `E`. The portrait pages include all nine
 cards, one for each numbered token.
+
+## 6. Package the project
+
+The files you assembled in steps 1 through 3 make up the project. Keep
+the adventure in `adventures/`, the location and creature JSON files in
+their library folders, and the images in `library/maps/` and
+`library/portraits/`. Use relative paths with forward slashes so the
+references work on Windows and macOS.
+
+From the repository root, export the project:
+
+```bat
+bin\process_adventure.bat "Jebs Cabin" --export "Jebs Cabin.dndts" --verbose
+```
+
+```sh
+sh bin/process_adventure.sh "Jebs Cabin" --export "Jebs Cabin.dndts" --verbose
+```
+
+The `.dndts` file is a ZIP archive. Export follows the adventure's
+references and includes each required file once. Use a new filename if a
+bundle with that name already exists. With `--verbose`, the command prints
+the archive tree:
+
+```text
+Jebs Cabin.dndts
+├── adventures/
+│   └── Jebs Cabin.adventure.json
+└── library/
+    ├── creatures/
+    │   ├── bugbear-2014.json
+    │   ├── goblin-2014.json
+    │   ├── hobgoblin-2014.json
+    │   └── hobgoblin-devastator-2016.json
+    ├── locations/
+    │   └── Jebs Cabin.json
+    ├── maps/
+    │   └── Jebs Cabin.png
+    └── portraits/
+        ├── bugbear-2014.png
+        ├── goblin-2014.png
+        ├── hobgoblin-2014.png
+        └── hobgoblin-devastator-2016.webp
+```
+
+## 7. Build from the project bundle
+
+Put the bundle in the receiving workspace and run:
+
+```bat
+bin\process_adventure.bat -f "Jebs Cabin.dndts"
+```
+
+```sh
+sh bin/process_adventure.sh -f "Jebs Cabin.dndts"
+```
+
+The command uses the assets in the bundle and writes PDFs to `out/`.
+After a successful build, enter `v` at the import prompt to preview the
+library tree, then answer `y` to import or press Enter to decline. The
+import skips identical files and asks before replacing files that differ.
+The adventure JSON stays in the bundle.

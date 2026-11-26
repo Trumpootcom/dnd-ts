@@ -32,7 +32,7 @@ merged PDF metadata.
 
 ## Adventure files
 
-See [Building Jebs Cabin Adventure](tutial.md) for a complete walkthrough.
+See [Building Jebs Cabin Adventure](Tutorial.md) for a complete walkthrough.
 
 See [Jebs Cabin](../../adventures/Jebs%20Cabin.adventure.json) for a complete
 example with reusable creatures. The Old Farmhouse example uses placeholder
@@ -168,7 +168,8 @@ building. Adventure templates come from the receiving workspace or the
 installed tool.
 
 After a successful build, the command asks whether to import the bundle's
-referenced resources into `library/`. Press Enter to decline. If you accept,
+referenced resources into `library/`. Enter `v` to view the resource tree before
+the command asks again. Press Enter to decline at either prompt. If you accept,
 the import skips identical files and asks before overwriting each differing
 file. The adventure JSON stays in the bundle, and the PDFs are available
 regardless of your import choices.

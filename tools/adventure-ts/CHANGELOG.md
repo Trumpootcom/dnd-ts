@@ -13,6 +13,6 @@
 - Export an adventure and its referenced library files as a portable `.dndts`
   bundle. Use `--verbose` to show the exported file tree.
 - Build PDFs directly from a bundle and optionally import its library resources,
-  with prompts before replacing differing files.
+  with a resource tree preview and prompts before replacing differing files.
 - Open the result in the system's default PDF viewer when a build publishes
   exactly one PDF.

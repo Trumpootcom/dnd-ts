@@ -19,6 +19,7 @@ try
                 Export packages the adventure file and its referenced library files.
                 Use --verbose with --export to print the bundle's file tree.
                 Build a bundle with -f and optionally import its library resources after success.
+                Enter v at the import prompt to view the resource tree before confirming.
                 If absent, the title uses the staged images in in_maps/ and in_portraits/.
                 Adventure files resolve location, image, and creature paths relative to the adventure file.
                 A location entry supplies widthFeet and resolves its image relative to the location JSON file.

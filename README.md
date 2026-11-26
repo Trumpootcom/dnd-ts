@@ -6,6 +6,9 @@ and workflow folders live at the repository root.
 
 ## Process an adventure
 
+Start with the [Building Jebs Cabin Adventure tutorial](tools/adventure-ts/Tutorial.md)
+to assemble an encounter, generate PDFs, and export a shareable project bundle.
+
 Run the adventure batch from the workspace root. A title looks for
 `adventures/<title>.adventure.json`. You can also pass that file's path directly.
 
@@ -30,6 +33,7 @@ Use `location` in an encounter map entry to reference a JSON file in
 Use `--export` to share an adventure and its assets as a `.dndts` bundle.
 Add `--verbose` to print the exported bundle's file tree.
 Use `-f` to build a bundle and optionally import its library resources.
+Enter `v` at the import prompt to preview the resource tree.
 If a title has no matching adventure file, the command reads staged images
 from `in_maps/` and `in_portraits/` and offers to archive them after a successful
 build. The default template publishes separate adventure-file PDFs such as

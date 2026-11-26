@@ -64,7 +64,7 @@ internal static class AdventureBundle
             var adventure = AdventureFile.Load(adventurePath, files);
             var result = build(adventure);
             if (result == 0 && files.Resources.Count > 0 &&
-                Confirm($"Import {files.Resources.Count} resources into library/?"))
+                ConfirmImport(files))
                 Import(root, files);
             return result;
         }
@@ -139,6 +139,18 @@ internal static class AdventureBundle
             }
             Console.WriteLine($"Imported {name}");
         }
+    }
+
+    private static bool ConfirmImport(AdventureBundleFiles files)
+    {
+        var message = $"Import {files.Resources.Count} resources into library/?";
+        Console.Write($"{message} [y/N/v] (v to view) ");
+        var answer = Console.ReadLine()?.Trim().ToLowerInvariant();
+        if (answer != "v")
+            return answer is "y" or "yes";
+
+        WriteTree(files.Resources.Keys, "");
+        return Confirm(message);
     }
 
     private static bool Confirm(string message)
